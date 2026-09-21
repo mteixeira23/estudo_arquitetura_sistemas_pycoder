@@ -9,6 +9,11 @@ authors = [
 ]
 dependencies = []
 
+[project.urls]
+Repository = "https://github.com/mteixeira23/estudo_arquitetura_sistemas_pycoder"
+Issues = "https://github.com/mteixeira23/estudo_arquitetura_sistemas_pycoder/issues"
+Documentation = "https://github.com/mteixeira23/estudo_arquitetura_sistemas_pycoder#readme"
+
 [dependency-groups]
 dev = [
     "pytest>=9.1.1",
