@@ -1,0 +1,54 @@
+# ==============================================================================
+# .gitignore Corporativo - Arquitetura de Sistemas Inteligentes (PycoderBR / SCSI)
+# ==============================================================================
+
+# 1. Ambientes Virtuais & Runtimes Locais (ADR 005)
+.venv/
+venv/
+ENV/
+env/
+.uv/
+
+# 2. Caches e Compilação Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# 3. Ferramental de Qualidade & Testes (Ruff, Pytest, Mypy, Coverage)
+.ruff_cache/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+*.cover
+
+# 4. Variáveis de Ambiente & Segredos Críticos (Segurança Estrita)
+.env
+.env.*
+!.env.example
+secrets/
+*.pem
+*.key
+
+# 5. Caches de IDEs & Editores
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 6. Logs & Arquivos Temporários
+*.log
+*.tmp
+scripts/.io_test.txt
+scripts/.symlink_test.tmp
+scripts/.iotest
+
+# 7. Caches de Banco e OS
+*.sqlite3
+*.db
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store

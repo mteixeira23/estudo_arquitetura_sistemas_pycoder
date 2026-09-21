@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Plano Mestre de Implementação - Arquitetura de Sistemas Inteligentes</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 14mm 12mm 14mm;
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-size: 8pt;
+                color: #666;
+            }
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+            font-size: 9.5pt;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-container {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .title-block h1 {
+            font-size: 16pt;
+            color: #0f766e;
+            margin: 0 0 3px 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .title-block p {
+            margin: 0;
+            font-size: 9pt;
+            color: #475569;
+        }
+
+        .badge-date {
+            background-color: #f1f5f9;
+            border: 1px solid #cbd5e1;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 8.5pt;
+            color: #334155;
+            font-weight: 600;
+            text-align: right;
+        }
+
+        h2 {
+            font-size: 11pt;
+            color: #0f172a;
+            border-left: 4px solid #0f766e;
+            padding-left: 8px;
+            margin: 14px 0 8px 0;
+            page-break-after: avoid;
+        }
+
+        .summary-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 12px;
+            font-size: 8.8pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 12px;
+            font-size: 8.5pt;
+            page-break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 7px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        .phase-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 9px;
+            background-color: #ffffff;
+            page-break-inside: avoid;
+        }
+
+        .phase-header {
+            background-color: #f1f5f9;
+            border-bottom: 1px solid #e2e8f0;
+            padding: 5px 9px;
+            font-weight: 700;
+            font-size: 9pt;
+            color: #0f766e;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .phase-body {
+            padding: 6px 10px;
+        }
+
+        .task-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 4px;
+            font-size: 8.5pt;
+        }
+
+        .checkbox-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #64748b;
+            border-radius: 3px;
+            margin-right: 7px;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+
+        .checkbox-box.checked {
+            background-color: #0f766e;
+            border-color: #0f766e;
+            position: relative;
+        }
+
+        .checkbox-box.checked::after {
+            content: "✓";
+            color: white;
+            font-size: 8.5pt;
+            position: absolute;
+            top: -2.5px;
+            left: 1.5px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            color: #334155;
+        }
+
+        .task-text strong {
+            color: #0f172a;
+        }
+
+        .badge-role {
+            font-size: 7.5pt;
+            padding: 2px 6px;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .footer {
+            margin-top: 14px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 6px;
+            font-size: 7.5pt;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div class="title-block">
+            <h1>Plano Mestre de Implementação</h1>
+            <p><strong>Arquitetura de Sistemas Inteligentes</strong> — Padrão PycoderBR / SCSI & Harness Antigravity 2.0</p>
+        </div>
+        <div class="badge-date">
+            Data: 21/09/2026<br>
+            Roteiro & Tasklist de Acompanhamento
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <strong>Objetivo do Estudo:</strong> Construir a arquitetura corporativa de microsserviços em containers Docker/Swarm, com separação estrita entre a camada web (Django + Gunicorn), borda e segurança (Cloudflare + Traefik), mensageria/jobs assíncronos (RabbitMQ + Celery) e agentes autônomos de Inteligência Artificial (LangChain + LangGraph).
+    </div>
+
+    <h2>1. Equipe Especialista & Papéis Ativos (AGENTS.md)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Subagente</th>
+                <th style="width: 33%;">Especialidade Principal</th>
+                <th style="width: 42%;">Atribuições no Projeto</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Arquiteto de Soluções</strong><br><code>arquiteto_solucoes</code></td>
+                <td>Desenho Sistêmico & Governança</td>
+                <td>Garantir coerência técnica, contratos de APIs, modelos de dados e avaliação de trade-offs.</td>
+            </tr>
+            <tr>
+                <td><strong>Engenheiro DevOps & Infra</strong><br><code>engenheiro_devops</code></td>
+                <td>Docker, Swarm, Traefik & Linux</td>
+                <td>Estruturar Dockerfiles multi-stage, compose stacks, roteamento dinâmico no Traefik e hardening.</td>
+            </tr>
+            <tr>
+                <td><strong>Engenheiro Backend & Filas</strong><br><code>engenheiro_backend</code></td>
+                <td>Django, Redis & RabbitMQ</td>
+                <td>Settings modulares, pool PostgreSQL, mensageria AMQP robusta e Celery Workers/Beat.</td>
+            </tr>
+            <tr>
+                <td><strong>Engenheiro de IA</strong><br><code>engenheiro_ia</code></td>
+                <td>IA Generativa, LangGraph & RAG</td>
+                <td>Grafos de decisão cognitivos desacoplados da requisição web, pipelines de IA e pgvector.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Matriz de Serviços e Portas da Infraestrutura</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Serviço / Container</th>
+                <th>Imagem Base</th>
+                <th>Portas Internas</th>
+                <th>Porta Exposta</th>
+                <th>Papel Arquitetural</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Traefik v3.1</strong></td>
+                <td><code>traefik:v3.1</code></td>
+                <td>80, 443, 8080</td>
+                <td><strong>80, 443 (HTTP/S)</strong></td>
+                <td>Proxy Reverso Ingress, Let's Encrypt e auto-discovery</td>
+            </tr>
+            <tr>
+                <td><strong>Django + Gunicorn</strong></td>
+                <td><code>python:3.12-slim</code></td>
+                <td>8000</td>
+                <td><em>Nenhuma</em> (via Traefik)</td>
+                <td>Aplicação web, APIs REST, admin e regras de negócio</td>
+            </tr>
+            <tr>
+                <td><strong>PostgreSQL 16</strong></td>
+                <td><code>postgres:16-alpine</code></td>
+                <td>5432</td>
+                <td><em>Nenhuma</em> (rede interna)</td>
+                <td>Banco relacional transacional ACID (suporta pgvector)</td>
+            </tr>
+            <tr>
+                <td><strong>Redis 7</strong></td>
+                <td><code>redis:7-alpine</code></td>
+                <td>6379</td>
+                <td><em>Nenhuma</em> (rede interna)</td>
+                <td>Cache de alta velocidade, sessões e Celery Results</td>
+            </tr>
+            <tr>
+                <td><strong>RabbitMQ 3</strong></td>
+                <td><code>rabbitmq:3-management</code></td>
+                <td>5672, 15672</td>
+                <td><em>15672</em> (VPN/Admin)</td>
+                <td>Broker de mensageria AMQP para filas resilientes</td>
+            </tr>
+            <tr>
+                <td><strong>Celery Worker</strong></td>
+                <td><code>python:3.12-slim</code></td>
+                <td>-</td>
+                <td><em>Nenhuma</em></td>
+                <td>Processamento em segundo plano e execução de IA</td>
+            </tr>
+            <tr>
+                <td><strong>Celery Beat</strong></td>
+                <td><code>python:3.12-slim</code></td>
+                <td>-</td>
+                <td><em>Nenhuma</em></td>
+                <td>Agendador periódico de rotinas (crontab interno)</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="page-break"></div>
+
+    <h2>3. Roteiro Passo a Passo & Tasklist de Acompanhamento</h2>
+
+    <!-- FASE 0 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 0: Fundação de Documentação e Governança Inicial</span>
+            <span>STATUS: CONCLUÍDO (100%)</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box checked"></span>
+                    <span class="task-text"><strong>Diretório Base:</strong> Criação de <code>estudo_arquitetura_sistemas_pycoder</code> no padrão corporativo.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box checked"></span>
+                    <span class="task-text"><strong>Documentos Base:</strong> Elaboração de <code>README.md</code>, <code>ARQUITETURA.md</code>, <code>AGENTS.md</code> e <code>MEMORIA.md</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box checked"></span>
+                    <span class="task-text"><strong>Diagrama Oficial:</strong> Alocação do diagrama de referência em <code>docs/arquitetura_deploy_scsi.png</code>.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 1 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 1: Harness do Antigravity 2.0 & Ambiente Local (Passos 1 e 2)</span>
+            <span class="badge-role">arquiteto_solucoes / engenheiro_backend</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 1.1 - Diagnóstico do Host:</strong> Checar Python 3.12+, Docker Desktop, WSL2, Git e <code>uv</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 1.2 - Runtimes & Ferramental:</strong> Criar ambiente virtual e instalar linter <code>ruff</code> e <code>pytest</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 1.3 - Arquivos de Governança:</strong> Criar <code>.editorconfig</code>, <code>pyproject.toml</code> e template <code>.env.example</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 2.1 - Git Local:</strong> Configurar <code>.gitignore</code> corporativo (bloquear secrets e caches) e <code>git init</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 2.2 - GitHub Remoto:</strong> Conectar repositório via SSH e estruturar CI básica com GitHub Actions.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 2 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 2: Borda, Domínio & Criptografia (Passos 3 e 4)</span>
+            <span class="badge-role">engenheiro_devops</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 3.1 - Cloudflare DNS:</strong> Configurar registros A/CNAME apontando para o IP da VPS com Proxy Laranja ativo.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 3.2 - Segurança Perimetral:</strong> Configurar WAF, mitigação DDoS e regras de cabeçalho de cache.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 4.1 - Criptografia SSL/TLS:</strong> Configurar modo <strong>Full (Strict)</strong> no Cloudflare.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 4.2 - Certificados de Origem:</strong> Gerar Cloudflare Origin CA ou configurar desafio ACME no Traefik.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 3 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 3: Infraestrutura de Servidor & Hardening (Passos 5 e 6)</span>
+            <span class="badge-role">engenheiro_devops</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 5.1 - Provisionamento Hostinger:</strong> Selecionar VPS (mínimo 4 vCPUs / 8-16GB RAM) e mapear firewall.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 6.1 - Usuário & SSH:</strong> Criar usuário <code>sudo</code>, configurar chaves Ed25519 e desabilitar login root.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 6.2 - Firewall UFW & SWAP:</strong> Bloquear portas externas exceto 22, 80 e 443; configurar 4-8GB de SWAP.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 6.3 - Segurança do SO:</strong> Instalar e configurar <code>fail2ban</code> contra ataques de força bruta.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 4 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 4: Orquestração & Ingress Dinâmico (Passos 7 e 8)</span>
+            <span class="badge-role">engenheiro_devops</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 7.1 - Docker & Swarm:</strong> Instalar Docker Engine oficial e executar <code>docker swarm init</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 7.2 - Redes Overlay:</strong> Criar redes isoladas <code>traefik-public</code> e <code>internal-net</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 8.1 - Setup Traefik:</strong> Montar <code>traefik.yml</code> com entrypoints 80, 443 e redirecionamento HTTPS.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 8.2 - Dashboard & SSL:</strong> Habilitar dashboard administrativo protegido com BasicAuth e SSL ativo.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <!-- FASE 5 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 5: Core da Aplicação & Camada de Persistência (Passos 9, 10 e 11)</span>
+            <span class="badge-role">engenheiro_backend</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 9.1 - Django Boilerplate:</strong> Configurar settings modulares (<code>base.py</code>, <code>dev.py</code>, <code>prod.py</code>).</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 9.2 - Dockerfile Multi-stage:</strong> Imagem enxuta de produção rodando com Gunicorn e WhiteNoise.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 10.1 - Redis Cache:</strong> Configurar container Redis para cache de alta performance e sessões Django.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 11.1 - PostgreSQL 16:</strong> Subir Postgres com volume persistente e suporte à extensão <code>pgvector</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 11.2 - Migrações & Backup:</strong> Testar migrações do Django e rotina de backup com <code>pg_dump</code>.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 6 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 6: Mensageria Assíncrona & Background Jobs (Passos 12, 13 e 14)</span>
+            <span class="badge-role">engenheiro_backend / engenheiro_devops</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 12.1 - RabbitMQ Broker:</strong> Subir RabbitMQ, criar vhosts, credenciais de produção e filas duráveis.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 13.1 - Celery Worker:</strong> Criar <code>celery.py</code>, configurar filas AMQP e Result Backend no Redis.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 13.2 - Resiliência:</strong> Implementar políticas de retry com backoff exponencial para falhas temporárias.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 14.1 - Celery Beat:</strong> Configurar agendamento de tarefas periódicas (*crontab* interno do sistema).</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- FASE 7 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Fase 7: Inteligência Artificial & Agentes Cognitivos (Passo 15)</span>
+            <span class="badge-role">engenheiro_ia</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 15.1 - Provedores de IA:</strong> Gestão segura de chaves de API (OpenAI, Gemini, Anthropic) via <code>.env</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 15.2 - Grafos no LangGraph:</strong> Implementar fluxos de decisão com nós, estado persistido e checagens.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 15.3 - Execução Não-Bloqueante:</strong> Invocar agentes cognitivos dentro dos Celery Workers.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Passo 15.4 - Entrega ao Usuário:</strong> Notificação do status da IA para a interface Django (Polling / HTMX).</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>4. Diretrizes de Operação do Harness Antigravity 2.0</h2>
+    <div class="grid-2">
+        <div class="summary-box">
+            <strong>Ciclo de Feedback Automatizado:</strong><br>
+            • Toda escrita de código Python é validada com <code>ruff check --fix</code>.<br>
+            • Validações de sintaxe e testes unitários executados via <code>pytest</code>.<br>
+            • Containers validados com healthchecks antes de cada aprovação.
+        </div>
+        <div class="summary-box">
+            <strong>Governança de Memória & Rastreabilidade:</strong><br>
+            • Atualização do <code>MEMORIA.md</code> a cada decisão técnica (ADR).<br>
+            • Transparência de comandos executados e logs de erros.<br>
+            • Segurança absoluta: zero commit de arquivos <code>.env</code> ou senhas.
+        </div>
+    </div>
+
+    <div class="footer">
+        Plano Mestre de Implementação • Estudo de Arquitetura de Sistemas Inteligentes (PycoderBR / SCSI) • Gerado para Antigravity 2.0
+    </div>
+
+</body>
+</html>

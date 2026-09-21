@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Passo 1.2: Runtimes & Configuração do Ambiente Virtual Isolado</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 14mm 12mm 14mm;
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-size: 8pt;
+                color: #666;
+            }
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+            font-size: 9pt;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-container {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .title-block h1 {
+            font-size: 15pt;
+            color: #0f766e;
+            margin: 0 0 3px 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .title-block p {
+            margin: 0;
+            font-size: 8.8pt;
+            color: #475569;
+        }
+
+        .badge-status {
+            background-color: #f0fdf4;
+            border: 1px solid #86efac;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 9pt;
+            color: #166534;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        h2 {
+            font-size: 10.5pt;
+            color: #0f172a;
+            border-left: 4px solid #0f766e;
+            padding-left: 8px;
+            margin: 12px 0 6px 0;
+            page-break-after: avoid;
+        }
+
+        .summary-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-size: 8.5pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 8.2pt;
+            page-break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 7px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        .phase-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background-color: #ffffff;
+            page-break-inside: avoid;
+        }
+
+        .phase-header {
+            background-color: #f0fdf4;
+            border-bottom: 1px solid #bbf7d0;
+            padding: 5px 10px;
+            font-weight: 700;
+            font-size: 8.8pt;
+            color: #166534;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .phase-body {
+            padding: 6px 10px;
+        }
+
+        .task-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 4px;
+            font-size: 8.3pt;
+        }
+
+        .checkbox-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #0f766e;
+            border-radius: 3px;
+            margin-right: 7px;
+            margin-top: 1.5px;
+            flex-shrink: 0;
+            background-color: #0f766e;
+            position: relative;
+        }
+
+        .checkbox-box::after {
+            content: "✓";
+            color: white;
+            font-size: 8.5pt;
+            position: absolute;
+            top: -2.5px;
+            left: 1.5px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            color: #334155;
+        }
+
+        .task-text strong {
+            color: #0f172a;
+        }
+
+        code {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background-color: #f1f5f9;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 7.8pt;
+            color: #0f766e;
+        }
+
+        .adr-card {
+            border-left: 3px solid #0f766e;
+            background-color: #f8fafc;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            border-radius: 0 4px 4px 0;
+            font-size: 8.2pt;
+        }
+
+        .footer {
+            margin-top: 12px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 5px;
+            font-size: 7.5pt;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div class="title-block">
+            <h1>Relatório de Homologação — Passo 1.2</h1>
+            <p><strong>Runtimes & Ambiente Virtual Isolado</strong> — Padrão PycoderBR / SCSI & Harness Antigravity 2.0</p>
+        </div>
+        <div class="badge-status">
+            STATUS: 100% CONCLUÍDO<br>
+            21/09/2026
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <strong>Conclusão do Marco 1.2:</strong> O ambiente virtual do projeto foi estabelecido com sucesso absoluto sob a diretriz da <strong>ADR 005</strong>. O CPython 3.12.14 foi provisionado hermeticamente, o diretório <code>.venv</code> foi instanciado em modo seedless (ultraleve, 121 KB), todos os smoke tests da PEP 405 foram aprovados e a salvaguarda de isolamento contra vazamento no Git foi ativada com a criação do <code>.gitignore</code> corporativo.
+    </div>
+
+    <h2>1. Matriz de Componentes e Evidências Técnicas (Passo 1.2)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 25%;">Componente / Arquivo</th>
+                <th style="width: 30%;">Configuração Real Detectada</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 30%;">Impacto Operacional</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong><code>.python-version</code></strong></td>
+                <td><code>3.12</code> (5 bytes, b'3.12\n')</td>
+                <td><span style="color:#166534; font-weight:bold;">Ativo</span></td>
+                <td>SSOT do projeto: força o uv, IDEs e GitHub Actions a utilizarem estritamente o Python 3.12.</td>
+            </tr>
+            <tr>
+                <td><strong>CPython Hermético</strong></td>
+                <td>CPython 3.12.14 (AMD64 / OpenSSL 3.5.8)</td>
+                <td><span style="color:#166534; font-weight:bold;">Provisionado</span></td>
+                <td>Alocado em <code>%APPDATA%\uv\python\</code>; zero impacto no Python 3.14 do Windows.</td>
+            </tr>
+            <tr>
+                <td><strong>Ambiente Virtual</strong></td>
+                <td><code>estudo_arquitetura_sistemas_pycoder\.venv</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Criado</span></td>
+                <td>Instanciado em milissegundos via <code>uv venv</code> com pegada de apenas 121 KB.</td>
+            </tr>
+            <tr>
+                <td><strong>Isolamento (PEP 405)</strong></td>
+                <td><code>include-system-site-packages = false</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Hermético</span></td>
+                <td><code>sys.prefix != sys.base_prefix</code> (True); zero contaminação do sistema global.</td>
+            </tr>
+            <tr>
+                <td><strong>Scripts de Ativação</strong></td>
+                <td><code>activate.ps1</code>, <code>activate.bat</code>, <code>activate</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Testados</span></td>
+                <td>Ativação validada no PowerShell (variável <code>VIRTUAL_ENV</code> e PATH shadowing funcionais).</td>
+            </tr>
+            <tr>
+                <td><strong>Automação <code>uv run</code></strong></td>
+                <td>Invocação direta sem ativação prévia</td>
+                <td><span style="color:#166534; font-weight:bold;">Operacional</span></td>
+                <td>O <code>uv run</code> detecta e utiliza o <code>.venv</code> automaticamente, eliminando erro humano.</td>
+            </tr>
+            <tr>
+                <td><strong>Salvaguarda <code>.gitignore</code></strong></td>
+                <td><code>.gitignore</code> corporativo criado</td>
+                <td><span style="color:#166534; font-weight:bold;">Blindado</span></td>
+                <td>Bloqueia commit acidental de <code>.venv/</code>, caches do Python/Ruff e arquivos de segredos <code>.env</code>.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Checklist das 5 Micro-Fases Concluídas (Passo 1.2)</h2>
+
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.2.1: Declaração Formal de Versão (.python-version)</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Arquivo <code>.python-version</code> criado com o conteúdo <code>3.12</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Guardrail ativado: o <code>uv</code> passou a recusar formalmente o Python 3.14 do host.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.2.2: Provisionamento Hermético do CPython 3.12 via uv</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Executado <code>uv python install 3.12</code>; baixado CPython 3.12.14 64-bit oficial (21 MiB).</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Binário validado com OpenSSL 3.5.8 nativo e isolamento em <code>%APPDATA%\uv\python\</code>.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.2.3: Instanciação do Ambiente Virtual (.venv)</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Executado <code>uv venv .venv</code>; ambiente gerado em fração de segundo.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Launcher stubs leves (45 KB) criados; <code>pyvenv.cfg</code> configurado com isolamento total.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.2.4: Smoke Test do Interpretador (PEP 405)</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Invocação direta de <code>.venv\Scripts\python.exe</code> confirmou Python 3.12.14 ativo.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Teste de ativação com <code>Activate.ps1</code> validou injeção e remoção limpa de <code>VIRTUAL_ENV</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Comando <code>uv run python</code> executou perfeitamente mirando o ambiente virtual local.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.2.5: Salvaguarda de Isolamento & Consolidação</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Criado o <code>.gitignore</code> corporativo protegendo <code>.venv/</code>, caches e arquivos <code>.env</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text">Histórico registrado na <code>MEMORIA.md</code> e Tasklist mestre atualizado.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>3. Próximo Passo do Roteiro</h2>
+    <div class="summary-box" style="border-left: 4px solid #0f766e;">
+        <strong>🚀 Transição para o Passo 1.3:</strong><br>
+        Instalação e configuração do linter/formatter ultrarrápido (<strong>`ruff`</strong>) e do test runner (<strong>`pytest`</strong>) dentro do nosso novo ambiente virtual, garantindo o ciclo de feedback automático do Harness.
+    </div>
+
+    <div class="footer">
+        Passo 1.2: Runtimes & Ambiente Virtual • Estudo de Arquitetura de Sistemas Inteligentes (PycoderBR / SCSI) • Antigravity 2.0
+    </div>
+
+</body>
+</html>

@@ -1,0 +1,61 @@
+# ==============================================================================
+# .gitattributes - Governança de Finais de Linha e Normalização Git
+# Projeto: Arquitetura de Sistemas Inteligentes (Padrão PycoderBR / SCSI)
+# Decisão Arquitetural: ADR 007 (Blindagem LF para Containers Linux)
+# ==============================================================================
+
+# 1. Normalização Global Padrão (Git normaliza para LF no repositório)
+* text=auto
+
+# 2. Scripts Shell e Infraestrutura de Containers (FORÇAR LF - ADR 007)
+# Impede o erro clássico "\r: command not found" em scripts executados em containers Linux
+*.sh text eol=lf
+*.bash text eol=lf
+Dockerfile* text eol=lf
+docker-compose*.yml text eol=lf
+docker-compose*.yaml text eol=lf
+
+# 3. Código-Fonte da Aplicação e Configurações (FORÇAR LF)
+*.py text eol=lf
+*.toml text eol=lf
+*.yaml text eol=lf
+*.yml text eol=lf
+*.json text eol=lf
+*.sql text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.js text eol=lf
+.env* text eol=lf
+.editorconfig text eol=lf
+.gitignore text eol=lf
+.gitattributes text eol=lf
+.python-version text eol=lf
+
+# 4. Scripts Nativos do Windows (Permitir ou Forçar CRLF se necessário)
+*.bat text eol=crlf
+*.cmd text eol=crlf
+*.ps1 text
+
+# 5. Arquivos Binários e Recursos de Mídia (Git NUNCA deve alterar bytes)
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.svg text eol=lf
+*.pdf binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.zip binary
+*.tar.gz binary
+*.tgz binary
+*.tar binary
+*.pyc binary
+*.pyo binary
+*.pyd binary
+*.db binary
+*.sqlite3 binary
+*.exe binary

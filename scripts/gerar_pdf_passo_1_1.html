@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Passo 1.1: Diagnóstico do Host, Runtimes e Harness do Antigravity 2.0</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 12mm 14mm 12mm 14mm;
+            @bottom-right {
+                content: counter(page) " / " counter(pages);
+                font-size: 8pt;
+                color: #666;
+            }
+        }
+        
+        * {
+            box-sizing: border-box;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            color: #1e293b;
+            line-height: 1.4;
+            font-size: 9pt;
+            background-color: #ffffff;
+            margin: 0;
+            padding: 0;
+        }
+
+        .header-container {
+            border-bottom: 2px solid #0f766e;
+            padding-bottom: 10px;
+            margin-bottom: 12px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .title-block h1 {
+            font-size: 15pt;
+            color: #0f766e;
+            margin: 0 0 3px 0;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        .title-block p {
+            margin: 0;
+            font-size: 8.8pt;
+            color: #475569;
+        }
+
+        .badge-status {
+            background-color: #f0fdf4;
+            border: 1px solid #86efac;
+            padding: 5px 12px;
+            border-radius: 6px;
+            font-size: 9pt;
+            color: #166534;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        h2 {
+            font-size: 10.5pt;
+            color: #0f172a;
+            border-left: 4px solid #0f766e;
+            padding-left: 8px;
+            margin: 12px 0 6px 0;
+            page-break-after: avoid;
+        }
+
+        .summary-box {
+            background-color: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-bottom: 10px;
+            font-size: 8.5pt;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 8.2pt;
+            page-break-inside: avoid;
+        }
+
+        th, td {
+            border: 1px solid #cbd5e1;
+            padding: 5px 7px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        tr:nth-child(even) td {
+            background-color: #f8fafc;
+        }
+
+        .phase-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            background-color: #ffffff;
+            page-break-inside: avoid;
+        }
+
+        .phase-header {
+            background-color: #f0fdf4;
+            border-bottom: 1px solid #bbf7d0;
+            padding: 5px 10px;
+            font-weight: 700;
+            font-size: 8.8pt;
+            color: #166534;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .phase-body {
+            padding: 6px 10px;
+        }
+
+        .task-list {
+            list-style: none;
+            padding-left: 0;
+            margin: 0;
+        }
+
+        .task-item {
+            display: flex;
+            align-items: flex-start;
+            margin-bottom: 4px;
+            font-size: 8.3pt;
+        }
+
+        .checkbox-box {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border: 1.5px solid #0f766e;
+            border-radius: 3px;
+            margin-right: 7px;
+            margin-top: 1.5px;
+            flex-shrink: 0;
+            background-color: #0f766e;
+            position: relative;
+        }
+
+        .checkbox-box::after {
+            content: "✓";
+            color: white;
+            font-size: 8.5pt;
+            position: absolute;
+            top: -2.5px;
+            left: 1.5px;
+            font-weight: bold;
+        }
+
+        .task-text {
+            color: #334155;
+        }
+
+        .task-text strong {
+            color: #0f172a;
+        }
+
+        code {
+            font-family: 'Consolas', 'Courier New', monospace;
+            background-color: #f1f5f9;
+            padding: 1px 4px;
+            border-radius: 3px;
+            font-size: 7.8pt;
+            color: #0f766e;
+        }
+
+        .badge-role {
+            font-size: 7.2pt;
+            padding: 2px 6px;
+            background-color: #e0f2fe;
+            color: #0369a1;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .adr-card {
+            border-left: 3px solid #0f766e;
+            background-color: #f8fafc;
+            padding: 6px 10px;
+            margin-bottom: 6px;
+            border-radius: 0 4px 4px 0;
+            font-size: 8.2pt;
+        }
+
+        .footer {
+            margin-top: 12px;
+            border-top: 1px solid #cbd5e1;
+            padding-top: 5px;
+            font-size: 7.5pt;
+            color: #64748b;
+            text-align: center;
+        }
+
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header-container">
+        <div class="title-block">
+            <h1>Relatório de Prontidão do Host & Conclusão do Passo 1.1</h1>
+            <p><strong>Auditoria Concluída</strong> — Host Windows 11 Pro & Calibração do Harness Antigravity 2.0</p>
+        </div>
+        <div class="badge-status">
+            STATUS: 100% APROVADO<br>
+            21/09/2026
+        </div>
+    </div>
+
+    <div class="summary-box">
+        <strong>Conclusão do Diagnóstico:</strong> O ambiente local foi submetido a uma auditoria integral e não-destrutiva cobrindo Python/uv, virtualização Docker/WSL2, Git/SSH e políticas do PowerShell. Todas as correções necessárias foram aplicadas com sucesso. O host está formalmente liberado para o <strong>Passo 1.2</strong>.
+    </div>
+
+    <h2>1. Matriz Consolidada de Prontidão do Host (Host Readiness Matrix)</h2>
+    <table>
+        <thead>
+            <tr>
+                <th style="width: 22%;">Pilar Auditado</th>
+                <th style="width: 28%;">Configuração / Versão Real</th>
+                <th style="width: 15%;">Status</th>
+                <th style="width: 35%;">Parecer e Ações Executadas</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Python Runtime</strong></td>
+                <td>Python 3.14.7 (64-bit) no PATH</td>
+                <td><span style="color:#166534; font-weight:bold;">Aprovado</span></td>
+                <td>CPython estável no Windows; suporte nativo a venv validado.</td>
+            </tr>
+            <tr>
+                <td><strong>Gerenciador `uv`</strong></td>
+                <td>Astral uv/uvx v0.12.7</td>
+                <td><span style="color:#166534; font-weight:bold;">Destaque</span></td>
+                <td>Capacidade de download hermético de Python e resolução ultra-rápida.</td>
+            </tr>
+            <tr>
+                <td><strong>Virtualização / Containers</strong></td>
+                <td>VT-x Ativo na BIOS / 7.15GB Livres</td>
+                <td><span style="color:#0369a1; font-weight:bold;">Alinhado</span></td>
+                <td>Docker e WSL2 ausentes no Windows; containers definidos para a VPS Hostinger.</td>
+            </tr>
+            <tr>
+                <td><strong>Identidade Git</strong></td>
+                <td><code>mteixeira23</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Corrigido</span></td>
+                <td>Espaço inicial removido de <code>user.email</code>; autoria vinculada ao GitHub.</td>
+            </tr>
+            <tr>
+                <td><strong>Branch Padrão Git</strong></td>
+                <td><code>init.defaultBranch = main</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Padronizado</span></td>
+                <td>Ajustado de <code>master</code> para <code>main</code>, alinhando ao padrão GitHub.</td>
+            </tr>
+            <tr>
+                <td><strong>Autenticação Git</strong></td>
+                <td>Git Credential Manager (GCM)</td>
+                <td><span style="color:#166534; font-weight:bold;">Seguro</span></td>
+                <td>Autenticação HTTPS com tokens OAuth protegidos pelo Windows.</td>
+            </tr>
+            <tr>
+                <td><strong>Caminhos Longos Windows</strong></td>
+                <td><code>LongPathsEnabled = 1</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Excelente</span></td>
+                <td>Sem limite de 260 caracteres no NTFS para pacotes profundos de IA.</td>
+            </tr>
+            <tr>
+                <td><strong>PowerShell ExecutionPolicy</strong></td>
+                <td><code>CurrentUser: RemoteSigned</code></td>
+                <td><span style="color:#166534; font-weight:bold;">Desbloqueado</span></td>
+                <td>Permite ativação de virtualenvs (<code>activate.ps1</code>) sem exigir modo Admin.</td>
+            </tr>
+            <tr>
+                <td><strong>Encoding do Python</strong></td>
+                <td><code>PYTHONUTF8 = 1</code> no escopo User</td>
+                <td><span style="color:#166534; font-weight:bold;">Ativado</span></td>
+                <td>Modo UTF-8 nativo (PEP 540) ativo no Windows, eliminando erros de acentuação.</td>
+            </tr>
+            <tr>
+                <td><strong>Conectividade Remota</strong></td>
+                <td>OpenSSH_for_Windows_9.5p2</td>
+                <td><span style="color:#166534; font-weight:bold;">Pronto</span></td>
+                <td>Cliente SSH nativo disponível para acesso à VPS Hostinger sem emuladores.</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>2. Decisões de Arquitetura Registradas (ADRs do Passo 1.1)</h2>
+    
+    <div class="adr-card">
+        <strong>ADR 005 — Adoção de Python 3.12 Hermético via `uv`:</strong><br>
+        Embora o host possua o Python 3.14.7, o projeto adotará formalmente o Python 3.12 isolado via <code>uv venv --python 3.12</code> no Passo 1.2. Isso assegura 100% de paridade com o container Docker de produção (<code>python:3.12-slim</code>) e garante disponibilidade de wheels pré-compilados para Django, Celery e LangGraph.
+    </div>
+
+    <div class="adr-card">
+        <strong>ADR 006 — Arquitetura Cloud-Native / VPS-First:</strong><br>
+        Aprovada a estratégia de manter o computador local como estação de trabalho ágil (código, testes rápidos e Git) e concentrar a malha de containers (Docker Swarm, Traefik, PostgreSQL, Redis e RabbitMQ) diretamente na VPS Hostinger Ubuntu Linux nos Passos 5 a 8, economizando RAM local e eliminando atritos de virtualização.
+    </div>
+
+    <div class="adr-card">
+        <strong>ADR 007 — Proteção de Scripts Linux via `.gitattributes`:</strong><br>
+        Diante do <code>core.autocrlf = true</code> no Windows, o projeto adotará um arquivo <code>.gitattributes</code> forçando que arquivos de script (<code>*.sh</code>) mantenham quebras de linha LF, impedindo falhas de execução no Docker.
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>3. Checklist de Execução Concluído (Passo 1.1)</h2>
+
+    <!-- MICRO-FASE 1.1.1 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.1.1: Diagnóstico do Ecossistema Python & uv</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Runtimes no PATH:</strong> Python 3.14.7 identificado; venv nativo testado e aprovado.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Astral uv:</strong> uv/uvx v0.12.7 ativo e pronto para gerenciar versões herméticas de Python.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Variáveis de Ambiente:</strong> Confirmado que <code>PYTHONPATH</code> e <code>PYTHONHOME</code> estão limpos.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MICRO-FASE 1.1.2 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.1.2: Diagnóstico de Virtualização, Docker & WSL2</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Hardware & BIOS:</strong> Virtualização VT-x habilitada e 7.15GB de RAM livre verificados.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Estratégia Definida:</strong> Aprovada abordagem Cloud-Native com containers rodando na VPS Hostinger.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MICRO-FASE 1.1.3 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.1.3: Diagnóstico e Ajustes de Git & Identidade</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Autoria Global:</strong> Espaço em branco corrigido em <code>marcos.vinicius2323@gmail.com</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Branch Padrão:</strong> <code>init.defaultBranch</code> ajustado globalmente para <code>main</code>.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Autenticação:</strong> Git Credential Manager (GCM) validado para conexões HTTPS com o GitHub.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MICRO-FASE 1.1.4 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.1.4: Diagnóstico e Ajustes do Shell & Permissões</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>LongPathsEnabled:</strong> Limite de 260 caracteres do NTFS verificado como ativo (valor 1).</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>ExecutionPolicy:</strong> Escopo <code>CurrentUser</code> ajustado para <code>RemoteSigned</code> sem privilégios de admin.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Permissões de I/O:</strong> Leitura, gravação e exclusão validadas no diretório do projeto.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- MICRO-FASE 1.1.5 -->
+    <div class="phase-card">
+        <div class="phase-header">
+            <span>Micro-Fase 1.1.5: Consolidação & Liberação</span>
+            <span>100% CONCLUÍDO</span>
+        </div>
+        <div class="phase-body">
+            <ul class="task-list">
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Histórico Registrado:</strong> Memória viva atualizada na <code>MEMORIA.md</code> com todas as decisões.</span>
+                </li>
+                <li class="task-item">
+                    <span class="checkbox-box"></span>
+                    <span class="task-text"><strong>Tasklist Mestre:</strong> Passo 1.1 assinalado como 100% concluído no <code>implementation_plan.md</code>.</span>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>4. Próximo Passo Imediato no Roteiro</h2>
+    <div class="summary-box" style="border-left: 4px solid #0f766e;">
+        <strong>🚀 Transição para o Passo 1.2:</strong><br>
+        Com o host perfeitamente calibrado, o próximo passo consiste em instanciar o ambiente virtual hermético do projeto via <code>uv venv --python 3.12 .venv</code> e fixar a versão através do arquivo <code>.python-version</code>.
+    </div>
+
+    <div class="footer">
+        Passo 1.1: Diagnóstico do Host & Harness • Estudo de Arquitetura de Sistemas Inteligentes (PycoderBR / SCSI) • Antigravity 2.0
+    </div>
+
+</body>
+</html>

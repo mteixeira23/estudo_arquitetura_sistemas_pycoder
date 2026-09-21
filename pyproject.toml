@@ -1,0 +1,122 @@
+[project]
+name = "estudo-arquitetura-sistemas-pycoder"
+version = "0.1.0"
+description = "Estudo de Arquitetura de Deploy de Sistemas Inteligentes (Padrão PycoderBR / SCSI)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+authors = [
+    { name = "Marcos Teixeira", email = "marcos.vinicius2323@gmail.com" }
+]
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "pytest-cov>=7.1.0",
+    "ruff>=0.16.8",
+]
+
+[tool.uv]
+package = false
+
+# ==============================================================================
+# Configuração do Linter & Formatter Ruff (Substituto de Flake8, Black e isort)
+# ==============================================================================
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".pytest_cache",
+    ".ruff_cache",
+    ".venv",
+    "build",
+    "dist",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",      # pycodestyle errors
+    "W",      # pycodestyle warnings
+    "F",      # pyflakes (bugs, variáveis não utilizadas, imports órfãos)
+    "I",      # isort (ordenação e agrupamento determinístico de imports)
+    "B",      # flake8-bugbear (armadilhas comuns de design e bugs sutis)
+    "C4",     # flake8-comprehensions (otimização de compreensões)
+    "UP",     # pyupgrade (modernização automática para sintaxe Python 3.12)
+    "ARG",    # flake8-unused-arguments (detecção de argumentos não utilizados)
+    "SIM",    # flake8-simplify (simplificação de condicionais e blocos de código)
+]
+ignore = [
+    "E501",   # line-length ignorado no linter porque é formatado automaticamente
+    "B008",   # chamadas de função em defaults de argumentos (padrão em Django e FastAPI)
+]
+fixable = ["ALL"]
+unfixable = []
+
+[tool.ruff.lint.isort]
+known-first-party = ["core", "apps", "config"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+# ==============================================================================
+# Configuração do Framework de Testes Pytest
+# ==============================================================================
+[tool.pytest.ini_options]
+minversion = "9.0"
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "-v",
+    "--strict-markers",
+    "--strict-config",
+    "--tb=short",
+]
+markers = [
+    "unit: Testes unitários isolados (sem I/O ou banco)",
+    "integration: Testes de integração entre componentes",
+    "e2e: Testes de ponta a ponta",
+    "celery: Testes de tarefas assíncronas e mensageria",
+    "ai: Testes de fluxos cognitivos e agentes de IA",
+]
+filterwarnings = [
+    "error",
+    "ignore::DeprecationWarning",
+    "ignore::PendingDeprecationWarning",
+]
+
+# ==============================================================================
+# Configuração de Cobertura de Código (Coverage.py / Pytest-Cov)
+# ==============================================================================
+[tool.coverage.run]
+branch = true
+omit = [
+    "*/migrations/*",
+    "tests/*",
+    "manage.py",
+    "config/wsgi.py",
+    "config/asgi.py",
+    ".venv/*",
+]
+
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = false
+fail_under = 0
+precision = 2
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+]
+
+

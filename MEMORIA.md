@@ -1,0 +1,84 @@
+# 🧠 Memória Viva do Estudo de Arquitetura (MEMORIA.md)
+**Projeto:** Plataforma de Sistemas Inteligentes (Padrão PycoderBR / SCSI)
+
+---
+
+## 📌 Origem e Propósito
+- **Referência:** Curso de Arquitetura de Deploy de Sistemas Inteligentes da PycoderBR Treinamentos (SCSI - Sistema de Gestão de Corretora de Seguros Inteligente).
+- **Objetivo Central:** Servir como base e fundação padronizada para o desenvolvimento, orquestração e deploy de todos os sistemas da equipe (incluindo modernização de processos, relatórios e automações).
+
+---
+
+## 📌 Premissas e Decisões Técnicas Consolidadas
+
+### 1. Desacoplamento entre Web e Processamento Pesado
+- **Decisão:** A camada web (Django + Gunicorn) NUNCA deve executar chamadas síncronas demoradas (como LLMs ou relatórios volumosos).
+- **Implementação:** Toda requisição que demorar mais de 500ms é despachada para filas do **RabbitMQ** e executada por **Celery Workers**, com status consultado no **Redis**.
+
+### 2. Separação de Funções entre RabbitMQ e Redis
+- **RabbitMQ:** Responsável exclusivo pelo transporte seguro de mensagens e gerenciamento de filas (Broker).
+- **Redis:** Responsável exclusivo pelo cache de alta velocidade, sessões web do Django e armazenamento temporário de resultados do Celery (*Results Backend*).
+
+### 3. Roteamento Dinâmico com Traefik
+- **Decisão:** Utilizar Traefik em vez de Nginx estático para gerenciar ingress e certificados SSL na VPS.
+- **Motivo:** O Traefik descobre novos containers automaticamente através de labels no Docker, simplificando deploys e renovação de SSL sem necessidade de recarregar arquivos de configuração manualmente.
+
+### 4. Armazenamento e Banco de Dados
+- **PostgreSQL 16+:** Banco relacional primário com dados em volume Docker persistente.
+- **Habilitação de pgvector:** Planejada para armazenamento de embeddings vetoriais para os agentes de LangGraph.
+
+---
+
+## 📌 Histórico de Evolução do Estudo
+- **[21/09/2026]:** Criação oficial do diretório de estudo estudo_arquitetura_sistemas_pycoder.
+- **[21/09/2026]:** Inclusão do diagrama oficial da arquitetura SCSI em docs/arquitetura_deploy_scsi.png.
+- **[21/09/2026]:** Elaboração do README.md, ARQUITETURA.md, AGENTS.md e MEMORIA.md.
+- **[21/09/2026 - Passo 1.1.1]:** Diagnóstico do ecossistema Python concluído: Python 3.14.7 (64-bit) ativo no host, módulo venv nativo funcional, Astral uv/uvx v0.12.7 instalado e operacional. **Decisão (ADR):** Adotado Python 3.12 gerenciado hermeticamente pelo `uv` para o projeto, garantindo paridade 1:1 com os containers Docker e compatibilidade total de bibliotecas.
+- **[21/09/2026 - Passo 1.1.2]:** Diagnóstico de virtualização e containers no Windows: Docker Desktop e WSL2 ausentes no Windows. Hardware auditado possui VT-x habilitado e 7.15GB de RAM livre. **Decisão (ADR 006):** Adotada formalmente a abordagem **Cloud-Native / VPS-First**, utilizando o Windows como estação ágil de desenvolvimento e a VPS Hostinger Ubuntu Linux para a orquestração completa dos containers Docker Swarm.
+- **[21/09/2026 - Passo 1.1.3]:** Diagnóstico e ajustes de Git e Versionamento concluídos: Git 2.55.0 ativo, GCM ativo para autenticação HTTPS. **Ajustes aplicados:** Removido o espaço em branco inicial do e-mail global (`marcos.vinicius2323@gmail.com`), associando perfeitamente a autoria ao GitHub; padronizado `init.defaultBranch = main` para eliminar descompasso de branches. `core.autocrlf = true` mantido com recomendação de `.gitattributes` para scripts Linux.
+- **[21/09/2026 - Passo 1.1.4]:** Diagnóstico e ajustes do Shell e Permissões concluídos: Windows PowerShell 5.1 (Build 26100), `LongPathsEnabled = 1` ativo no Registro do Windows (sem limite de 260 caracteres para árvores profundas de IA). **Ajuste aplicado:** Configurada explicitamente a `ExecutionPolicy` do escopo `CurrentUser` para `RemoteSigned`, garantindo que scripts locais (como `activate.ps1`) rodem sem bloqueios mesmo em sessões não-elevadas. **Diretriz técnica:** Adotado modo nativo do `uv` (hardlinks/copies) para criação do virtualenv, dispensando links simbólicos que exigiriam elevação de Administrador.
+- **[21/09/2026 - Passo 1.1.5]:** **Conclusão formal do Passo 1.1 (Host Readiness Report):** Todos os pilares do ambiente host foram auditados, calibrados e aprovados. **Ajuste aplicado:** Configurada a variável persistente `PYTHONUTF8 = 1` no escopo do usuário (PEP 540), garantindo operação pura em UTF-8 no Windows e eliminando erros de acentuação/encoding. Confirmada a presença do cliente nativo **OpenSSH 9.5p2**, pronto para conexões com a VPS Hostinger sem emuladores externos. Ambiente 100% pronto para o Passo 1.2.
+- **[21/09/2026 - Passo 1.2.1]:** Criado o arquivo `.python-version` na raiz do projeto com o valor `3.12`. O `uv` agora ignora automaticamente o Python 3.14 do sistema e passa a buscar exclusivamente o CPython 3.12 hermético para todas as operações locais.
+- **[21/09/2026 - Passo 1.2.2]:** Executado `uv python install 3.12`. Provisionado com sucesso o CPython 3.12.14 (64-bit) de forma hermética em `AppData\Roaming\uv\python`, sem alterar o PATH do Windows ou o Python 3.14 do sistema. `uv python find` resolvido para o novo runtime com sucesso.
+- **[21/09/2026 - Passo 1.2.3]:** Executado `uv venv .venv`. Criado o ambiente virtual isolado vinculado exclusivamente ao CPython 3.12.14. `include-system-site-packages = false` assegura isolamento total contra pacotes globais do Windows. Gerados os scripts de ativação (`activate.ps1`, `activate.bat`, `activate`).
+- **[21/09/2026 - Passo 1.2.4]:** Smoke Test do interpretador executado com sucesso: `sys.version` confirmou CPython 3.12.14, `sys.executable` e `sys.prefix` confirmaram isolamento hermético dentro de `.venv`, script `activate.ps1` ativou a variável `$env:VIRTUAL_ENV` perfeitamente no PowerShell, e `uv run` executou scripts usando o ambiente sem necessidade de ativação manual.
+- **[21/09/2026 - Passo 1.2.5]:** **Conclusão formal do Passo 1.2:** Criado o `.gitignore` corporativo preventivo blindando a pasta `.venv/`, caches do Python/Ruff e segredos `.env`. O ambiente virtual está 100% isolado, funcional e protegido contra vazamento no Git. Passo 1.2 formalmente homologado.
+- **[21/09/2026 - Passo 1.3.1]:** Instalação das ferramentas de desenvolvimento e qualidade (`ruff`, `pytest`, `pytest-cov`) concluída com sucesso via `uv pip install`. Instalados `ruff 0.16.8`, `pytest 9.1.1` e `pytest-cov 7.1.0` de forma estritamente isolada no `.venv`. Binários operacionais e verificados via `uv run`.
+- **[21/09/2026 - Passo 1.3.2]:** Criação e estruturação do `pyproject.toml` (PEP 518, PEP 621, PEP 735) estabelecendo os metadados do projeto, restrição formal de runtime `requires-python = ">=3.12,<3.13"`, grupo de dependências de desenvolvimento (`[dependency-groups] dev`) e configuração de projeto de aplicação (`[tool.uv] package = false`). Gerado o lockfile hermético `uv.lock` com hashes criptográficos multiplataforma.
+- **[21/09/2026 - Passo 1.3.3]:** Configuração aprofundada do Ruff no `pyproject.toml` (`[tool.ruff]`, `[tool.ruff.lint]`, `[tool.ruff.format]`, `[tool.ruff.lint.isort]`). Definido `target-version = "py312"`, comprimento de linha 88, regras rigorosas de linting (`E`, `W`, `F`, `I`, `B`, `C4`, `UP`, `ARG`, `SIM`), formatação determinística e imports de primeira classe organizados (`core`, `apps`, `config`). Teste `uv run ruff check .` executado com 100% de sucesso.
+- **[21/09/2026 - Passo 1.3.4]:** Configuração do Pytest e Cobertura de Código no `pyproject.toml` (`[tool.pytest.ini_options]`, `[tool.coverage.run]`, `[tool.coverage.report]`). Criado o diretório `tests/` e a suíte inicial de sanidade `test_harness.py` cobrindo versão 3.12, isolamento do virtualenv e recursos modernos (PEP 695 type aliases e pattern matching). Execução via `uv run pytest` concluída com 3/3 testes aprovados em 0.04s.
+- **[21/09/2026 - Passo 1.3.5]:** **Conclusão formal do Passo 1.3:** Smoke test integrado do pipeline de qualidade executado com 100% de sucesso (`uv run ruff check .` sem erros, 5 arquivos formatados, 3/3 testes passando em 0.03s). Gerado e salvo o relatório executivo em PDF de alta resolução no Desktop (`Passo_1.3_Linter_Formatter_e_Testes.pdf`, 211 KB) e em `docs/`. Passo 1.3 formalmente homologado.
+- **[21/09/2026 - Passo 1.4.1]:** Criação do arquivo `.editorconfig` na raiz do projeto com regras universais de formatação para editores/IDEs: charset `utf-8`, quebra de linha `lf`, remoção de espaços finais, 4 espaços para Python (alinhado a 88 colunas) e 2 espaços para configurações estruturadas (YAML, JSON, TOML, Docker).
+- **[21/09/2026 - Passo 1.4.2]:** Criação do arquivo `.gitattributes` na raiz do projeto implementando a ADR 007 (blindagem de line endings para containers Linux). Fixado `*.sh text eol=lf`, `Dockerfile* text eol=lf` e `*.py text eol=lf` para impedir que o `core.autocrlf = true` do Windows contamine scripts executados na VPS Hostinger com caracteres `\r`. Mapeados arquivos binários e normalização global `* text=auto`.
+- **[21/09/2026 - Passo 1.4.3]:** Criação do arquivo `.env.example` corporativo como contrato declarativo de variáveis de ambiente cobrindo as 7 camadas da stack SCSI: Django Core, PostgreSQL 16, Redis Cache, RabbitMQ Broker, Celery Worker/Beat, APIs de IA (OpenAI, Gemini, Anthropic, LangSmith) e Borda Ingress (Cloudflare e Traefik).
+- **[21/09/2026 - Passo 1.4.4]:** Auditoria integrada de conformidade dos guardrails: verificação de encoding (100% UTF-8 sem BOM em todos os 6 arquivos de governança), confirmação de quebra de linha LF (Unix) pura, validação do padrão `.gitignore` blindando arquivos de segredo locais (`.env`, `.env.local`) e liberando `.env.example`, e execução limpa do pipeline de linter e testes.
+- **[21/09/2026 - Passo 1.4.5]:** **Conclusão formal do Passo 1.4:** Consolidação dos guardrails arquiteturais do repositório (`.editorconfig`, `.gitattributes` ADR 007, `.env.example`). Gerado e salvo o relatório executivo em PDF de alta resolução no Desktop (`Passo_1.4_Governanca_e_Guardrails.pdf`, 277 KB) e em `docs/`. Passo 1.4 formalmente homologado.
+- **[21/09/2026 - Passo 1.5.1]:** Auditoria dos servidores MCP (Model Context Protocol) concluída com sucesso. Mapeados e catalogados os 3 servidores ativos: `notebooklm` (20 ferramentas para RAG, sessões de pesquisa e geração de áudio explicativo), `postgres` (ferramenta `query` para inspeção relacional e pgvector) e `puppeteer` (7 ferramentas para testes E2E, capturas visuais e auditoria de páginas renderizadas).
+- **[21/09/2026 - Passo 1.5.2]:** Validação das políticas de terminal e ambiente concluída: confirmada `ExecutionPolicy RemoteSigned` (CurrentUser), cliente OpenSSH 9.5p2 ativo para conexões com a VPS, e aprimorado o script `Activate.ps1` com export automático de `PYTHONUTF8 = 1` na ativação (e limpeza no `deactivate`). Teste de ativação comprovou `UTF8_MODE=1` e `STDOUT=utf-8` nativo.
+- **[21/09/2026 - Passo 1.5.3]:** Auditoria e alinhamento dos 4 subagentes especialistas de `AGENTS.md`: corrigido o identificador canônico de `arquiteto_solucoes` e estabelecida a Matriz de Atuação Operacional cruzando os papéis dos especialistas (`arquiteto_solucoes`, `engenheiro_devops`, `engenheiro_backend`, `engenheiro_ia`) com as 7 fases estratégicas da arquitetura SCSI.
+- **[21/09/2026 - Passo 1.5.4]:** Smoke test integrado e consolidado de toda a Fase 1 executado com 100% de sucesso: Python 3.12.14 isolado em `.venv`, Ruff sem erros estáticos e com formatação perfeita, Pytest com 3/3 testes aprovados em 0.03s, `uv sync` em 1ms, 11/11 arquivos de governança verificados e zero arquivos residuais/temporários no workspace.
+- **[21/09/2026 - Passo 1.5.5]:** **Conclusão formal do Passo 1.5 & HOMOLOGAÇÃO DA FASE 1:** Emissão do relatório executivo em PDF de alta resolução no Desktop (`Passo_1.5_Antigravity_e_Homologacao_Fase1.pdf`, 211 KB) e em `docs/`. A **FASE 1 (Harness do Antigravity 2.0 & Ambiente de Desenvolvimento Local)** está 100% concluída, documentada e aprovada por unanimidade pelos 4 subagentes especialistas, liberando formalmente o início da **Fase 2 (Git & GitHub)**.
+- **[21/09/2026 - Micro-Fase 2.1.1]:** Repositório Git local inicializado formalmente com a branch canônica `main` (`git init -b main`). Criada a estrutura de dados `.git/` (hooks, info, objects, refs, config, HEAD), verificado `git rev-parse --is-inside-work-tree = true` e comprovado que o ponteiro de branch inicial aponta para `refs/heads/main` sem resquícios do padrão legado `master`.
+- **[21/09/2026 - Micro-Fase 2.1.2]:** Calibração de governança local do Git concluída: configurados no escopo local (.git/config) `core.longpaths = true` (eliminando o teto de 260 caracteres no Windows) e `init.defaultBranch = main`. Confirmada a herança estrita dos metadados globais de autoria (`user.name = mteixeira23`, `user.email = marcos.vinicius2323@gmail.com`) e comportamento de checkout `core.autocrlf = true` protegido pela ADR 007.
+- **[21/09/2026 - Micro-Fase 2.1.3]:** Auditoria matemática do motor de exclusão (.gitignore) concluída via `git check-ignore -v`. Comprovado o bloqueio estrito de `.venv/` (linha 6), `.coverage` (linha 22), `.pytest_cache/` (linha 20), `.ruff_cache/` (linha 19), `.env` (linha 27), `.env.local` (linha 28) e arquivos temporários (linha 44). Confirmada a isenção intencional de `!.env.example` (linha 29) e a elegibilidade plena dos arquivos de governança e código para commit.
+- **[21/09/2026 - Micro-Fase 2.1.4]:** Auditoria do motor de atributos (.gitattributes) concluída via `git check-attr -a`. Confirmada a aplicação estrita da ADR 007 (`eol: lf` e `text: set`) para scripts (`*.sh`), arquivos Docker (`Dockerfile*`, `docker-compose.yml`), Python (`*.py`) e configurações (`pyproject.toml`), além do tratamento inviolável de binários (`binary: set`, `diff: unset`, `text: unset`) para arquivos `.png` e `.pdf`.
+- **[21/09/2026 - Micro-Fase 2.1.5]:** **Conclusão formal da Micro-Fase 2.1:** Inspeção do estado de trabalho via `git status` e `git status -u` concluída com 100% de conformidade. Repositório na branch `main`, sem commits prévios (`No commits yet`). Mapeados com precisão 24 itens legítimos elegíveis para o staging (governança, documentação, testes, scripts de PDF e lockfile). Confirmada a ausência absoluta de `.venv/`, `.coverage` ou caches no tracking. Micro-fase 2.1 formalmente concluída e homologada.
+- **[21/09/2026 - Micro-Fase 2.2.1]:** Empacotamento cirúrgico para a Staging Area concluído com sucesso via `git add .`. Todos os 24 itens legítimos migraram para a Staging Area (`Changes to be committed`), sem nenhuma contaminação de `.venv/`, `.coverage` ou caches. Avisos de normalização de quebra de linha confirmaram a substituição de CRLF por LF no banco de objetos para arquivos de governança, em perfeita conformidade com a ADR 007.
+- **[21/09/2026 - Micro-Fase 2.2.2]:** Auditoria estatística e de blobs na Staging Area concluída (`git diff --cached --stat` e `git ls-files --stage`). Confirmada a indexação de 25 arquivos (3.155 inserções de texto e 7 binários invioláveis). Inspeção byte a byte do banco de objetos do Git comprovou ausência total do byte 13 (`\r` CR) nos blobs de texto, validando a pureza estrita de LF (Unix) nos objetos internos (ADR 007).
+- **[21/09/2026 - Micro-Fase 2.2.3]:** Formulação da mensagem do commit inicial estruturada no padrão Conventional Commits (`chore(foundation): inicializacao do harness de qualidade e governanca do projeto scsi`). Documentados escopo, rastreabilidade de ADRs (ADRs 005 a 009), autoria de `mteixeira23` e branch `main`. Mensagem encapsulada em `scripts/.commit_msg.tmp` em UTF-8 puro e blindada pelo `.gitignore` (*.tmp).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
