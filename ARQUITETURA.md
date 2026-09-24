@@ -52,6 +52,8 @@ abbitmq:3-management| 5672, 15672 | 15672 (opcional p/ admin)| Broker AMQP para 
 
 ## 4. Pilares de Segurança e Operação
 
-1. **Nenhum banco ou broker exposto à Internet:** Apenas as portas 80 e 443 do Traefik são expostas publicamente. PostgreSQL, Redis, RabbitMQ e Celery comunicam-se exclusivamente através de redes internas seguras do Docker (ridge ou overlay).
+1. **Nenhum banco ou broker exposto à Internet:** Apenas as portas 80 e 443 do Traefik são expostas publicamente. PostgreSQL, Redis, RabbitMQ e Celery comunicam-se exclusivamente através de redes internas seguras do Docker ( ridge ou overlay).
 2. **Ambiente Dev vs Produção Idênticos:** O desenvolvimento local utiliza a mesma composição de containers, mitigando surpresas em produção.
 3. **Escalabilidade Horizontal de Processamento:** Quando o volume de IA ou de tarefas assíncronas cresce, basta escalar réplicas de workers (docker compose up -d --scale celery_worker=4) sem onerar a aplicação web.
+4. **Operação Headless & Automação API-First pelo Antigravity (Zero Dashboard Dependency):** Todos os componentes e serviços externos da arquitetura (Cloudflare, GitHub, Hostinger VPS, Traefik, PostgreSQL, Redis, RabbitMQ, Celery e LLMs) são operados, inspecionados e parametrizados diretamente pelo assistente Antigravity via APIs oficiais, CLI e SDKs herméticos, eliminando a dependência de operação manual em painéis gráficos web pelo usuário humano (ADR 011).
+5. **Criptografia Ponta a Ponta Mandatória com SSL/TLS Full (Strict):** Proibição categórica dos modos `Off`, `Flexible` e `Full (permissivo)` da Cloudflare. É mandatório o uso exclusivo do modo `Full (Strict)` com certificados válidos e confiáveis (Cloudflare Origin CA ou Let's Encrypt) instalados no Traefik Ingress na porta 443 da VPS Hostinger, garantindo imunidade a ataques Man-in-the-Middle (MitM) no trânsito público e eliminando loops de redirecionamento 301 (ADR 010).

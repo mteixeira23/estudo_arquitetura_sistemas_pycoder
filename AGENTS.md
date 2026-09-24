@@ -47,3 +47,12 @@
 | **Fase 6: Core Web & Persistência** | `engenheiro_backend` | `arquiteto_solucoes` | Django, Gunicorn, PostgreSQL 16 e Redis |
 | **Fase 7: Mensageria & IA Cognitiva** | `engenheiro_ia` | `engenheiro_backend` | RabbitMQ, Celery Workers, LangGraph e RAG |
 
+---
+
+## ⚡ Diretriz Global de Operação: Paradigma API-First & Operação Headless (ADR 011)
+
+- **Mandato Corporativo:** Toda e qualquer ferramenta, serviço de nuvem ou componente da stack técnica (Cloudflare, GitHub, Hostinger VPS, Traefik Ingress, PostgreSQL 16, Redis, RabbitMQ, Celery, OpenAI/LLMs, etc.) deve ser acessado, auditado, monitorado e provisionado pelo Antigravity **diretamente via API oficial, CLI ou SDK programático**, dispensando o usuário de abrir dashboards ou executar tarefas manuais em navegadores.
+- **Transparência Conversacional:** O usuário comanda em linguagem natural no chat; o Antigravity traduz a intenção em chamadas de API, executa a operação e apresenta o relatório estruturado em tempo real.
+- **Governança de Segredos:** Tokens de acesso e chaves de API permanecem estritamente no arquivo local `.env` (protegido pela linha 27 do `.gitignore`), garantindo soberania e segurança total das credenciais.
+
+
