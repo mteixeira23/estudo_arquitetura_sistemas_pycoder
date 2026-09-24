@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Relatório Executivo - Fase 6: Core Web & Persistência</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; margin: 40px; }
+        h1 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2980b9; margin-top: 30px; }
+        .highlight { background-color: #f8f9fa; border-left: 4px solid #e74c3c; padding: 10px 15px; margin: 20px 0; font-style: italic; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+    <h1>Relatório Executivo de Arquitetura - SCSI</h1>
+    <p><strong>Fase 6:</strong> Core Web e Persistência de Dados</p>
+    <p><strong>Data de Emissão:</strong> 24 de Setembro de 2026</p>
+
+    <div class="highlight">
+        Este documento certifica o encerramento da Fase 6, estabelecendo o padrão ouro para a fundação da API Django e dos Bancos de Dados no cluster Docker Swarm. Todas as decisões foram homologadas pelo painel de especialistas (Arquiteto, DevOps, Backend e IA).
+    </div>
+
+    <h2>1. Persistência de Dados (PostgreSQL 16)</h2>
+    <p>Foi adotada a imagem <code>pgvector/pgvector:pg16</code> em preparação para a Fase 7 (RAG). A arquitetura garante injeção segura de senhas via Docker Secrets em RAM (sufixo <code>_FILE</code>), isolamento absoluto na rede <code>scsi_data</code> e pinagem estrita de volume via labels do Swarm (<code>db_node == "true"</code>) para evitar orfandade de discos locais.</p>
+
+    <h2>2. Cache e Sessões (Redis 7)</h2>
+    <p>Utilização da variante <code>redis:7-alpine</code>. Implementou-se um *hotfix* avançado no <em>entrypoint</em> para injetar senhas dinamicamente em um <code>redis.conf</code> efêmero, evitando vazamentos via comando <code>ps</code> no host. O limite rígido de memória foi configurado via <code>--maxmemory</code> e política <code>volatile-lru</code> para prevenir interrupções abruptas pelo OOM Killer.</p>
+
+    <h2>3. Arquitetura da API (Django + ASGI)</h2>
+    <p>Abandono do padrão monolítico WSGI. Em prol da Inteligência Artificial Generativa, a aplicação foi projetada para rodar via <strong>Gunicorn + Uvicorn Workers (ASGI)</strong>, viabilizando o <em>Streaming</em> não-bloqueante de tokens. O sistema foi integrado ao Traefik com TLS habilitado na borda e rotinas estritas de <em>Healthcheck</em> para garantir deploys sem <em>downtime</em>.</p>
+
+    <h2>4. Otimização de Build (Dockerfile Multi-stage)</h2>
+    <p>Adoção da imagem <code>python:3.12-slim</code> para evitar conflitos de bibliotecas <code>musl libc</code> inerentes ao Alpine. O build é guiado pelo gerenciador ultra-rápido <strong>Astral uv</strong> em dois estágios, isolando as dependências de compilação da imagem final. O container é selado em execução como usuário não-root (<code>appuser</code>), fechando o perímetro de segurança.</p>
+
+    <br><br>
+    <hr>
+    <p style="text-align: center; font-size: 0.9em; color: #7f8c8d;">Gerado automaticamente pelo Agente Antigravity - Padrão PycoderBR</p>
+</body>
+</html>
