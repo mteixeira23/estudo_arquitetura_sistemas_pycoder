@@ -16,6 +16,8 @@ services:
       TASKS: 1
       NODES: 1
       NETWORKS: 1
+      EVENTS: 1
+      VERSION: 1
       # Proibição Absoluta de Chamadas de Modificação/Escrita
       POST: 0
       BUILD: 0
