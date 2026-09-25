@@ -1,0 +1,60 @@
+# ==============================================================================
+# MIDDLEWARES CORPORATIVOS DO TRAEFIK INGRESS — ARQUITETURA SCSI
+# (/etc/traefik/dynamic/middlewares.yml)
+# ==============================================================================
+http:
+  middlewares:
+    # 1. Compressão Dinâmica (Excluindo estritamente Server-Sent Events / Streaming de IA)
+    scsi-compress:
+      compress:
+        excludedContentTypes:
+          - "text/event-stream"        # OBRIGATÓRIO: Impede buffering de tokens LLM / LangGraph
+          - "application/octet-stream"
+
+    # 2. Cabeçalhos de Segurança da Aplicação (HSTS, Anti-Clickjacking e MIME)
+    scsi-headers:
+      headers:
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+          X-Frame-Options: "DENY"
+          X-Content-Type-Options: "nosniff"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+
+    # 3. Autenticação Básica para Dashboards Administrativos (Traefik e Flower)
+    # Usuário padrão: scsi_admin (senha: admin_scsi_123456 hash bcrypt)
+    scsi-admin-auth:
+      basicAuth:
+        users:
+          - "scsi_admin:$2y$10$w850z/3yXzB2yLrq4FjKjeK53m159K0s827aE1029cK.gHqg3k1tS"
+        removeHeader: true
+
+    # 4. Whitelist Perimétrica de IPs Oficiais da Cloudflare
+    scsi-cf-whitelist:
+      ipAllowList:
+        sourceRange:
+          # IPv4
+          - "173.245.48.0/20"
+          - "103.21.244.0/22"
+          - "103.22.200.0/22"
+          - "103.31.4.0/22"
+          - "141.101.64.0/18"
+          - "108.162.192.0/18"
+          - "190.93.240.0/20"
+          - "188.114.96.0/20"
+          - "197.234.240.0/22"
+          - "198.41.128.0/17"
+          - "162.158.0.0/15"
+          - "104.16.0.0/13"
+          - "104.24.0.0/14"
+          - "172.64.0.0/13"
+          - "131.0.72.0/22"
+          # IPv6
+          - "2400:cb00::/32"
+          - "2606:4700::/32"
+          - "2803:f800::/32"
+          - "2405:b500::/32"
+          - "2405:8100::/32"
+          - "2a06:98c0::/29"
+          - "2c0f:f248::/32"

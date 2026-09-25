@@ -1,0 +1,412 @@
+version: "3.9"
+
+# ==============================================================================
+# STACK DE PRODUÇÃO SGI FUNDAÇÃO DR. JESUS (PADRÃO SCSI)
+# Deploy em Docker Swarm / Zero-Downtime Rolling Updates / Healthchecks & Rollback
+# ==============================================================================
+
+services:
+  # ----------------------------------------------------------------------------
+  # 1. FRONTEND: Interface SPA React sob Nginx Alpine com Probe /healthz
+  # ----------------------------------------------------------------------------
+  frontend:
+    image: scsi/frontend:latest
+    build:
+      context: ../sgi-fundacao-dr-jesus
+      dockerfile: Dockerfile
+    networks:
+      - scsi_public
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/healthz || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      mode: replicated
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+        monitor: 20s
+        max_failure_ratio: 0.2
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+        failure_action: pause
+        monitor: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.scsi-front.rule=Host(`app.scsi.pycoder.com.br`) || Host(`scsi.pycoder.com.br`)"
+        - "traefik.http.routers.scsi-front.entrypoints=websecure"
+        - "traefik.http.routers.scsi-front.tls=true"
+        - "traefik.http.routers.scsi-front.middlewares=scsi-headers@file,scsi-compress@file"
+        - "traefik.http.services.scsi-front.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # 2. BACKEND: Django ASGI (Daphne) — REST API, WebSockets e Streaming SSE
+  # ----------------------------------------------------------------------------
+  backend:
+    image: scsi/backend:latest
+    build:
+      context: ../backend-dr-jesus
+      dockerfile: Dockerfile
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+    secrets:
+      - scsi_django_secret_key
+      - scsi_postgres_db
+      - scsi_postgres_user
+      - scsi_postgres_password
+      - scsi_redis_password
+      - scsi_rabbitmq_user
+      - scsi_rabbitmq_password
+    environment:
+      DEBUG: "False"
+      ALLOWED_HOSTS: "api.scsi.pycoder.com.br,localhost,127.0.0.1,backend"
+      CORS_ALLOWED_ORIGINS: "https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br"
+      CSRF_TRUSTED_ORIGINS: "https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br,https://api.scsi.pycoder.com.br"
+      POSTGRES_HOST: "db"
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      USE_REDIS_CHANNEL: "true"
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: "5672"
+      OLLAMA_HOST: "http://ollama:11434"
+    volumes:
+      - dr_jesus_media_data:/app/media
+      - dr_jesus_static_data:/app/staticfiles
+    networks:
+      - scsi_public
+      - scsi_internal
+      - scsi_data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import urllib.request; urllib.request.urlopen(\"http://127.0.0.1:8000/api/health/\", timeout=4)' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 25s
+    deploy:
+      mode: replicated
+      replicas: 2
+      update_config:
+        parallelism: 1
+        delay: 15s
+        order: start-first
+        failure_action: rollback
+        monitor: 25s
+        max_failure_ratio: 0.2
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        order: stop-first
+        failure_action: pause
+        monitor: 10s
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "1.50"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.scsi-api.rule=Host(`api.scsi.pycoder.com.br`)"
+        - "traefik.http.routers.scsi-api.entrypoints=websecure"
+        - "traefik.http.routers.scsi-api.tls=true"
+        - "traefik.http.routers.scsi-api.middlewares=scsi-headers@file,scsi-compress@file"
+        - "traefik.http.services.scsi-api.loadbalancer.server.port=8000"
+
+  # ----------------------------------------------------------------------------
+  # 3. BANCO DE DADOS: PostgreSQL 16 com extensão pgvector e RLS Fail-Closed
+  # ----------------------------------------------------------------------------
+  db:
+    image: pgvector/pgvector:pg16
+    secrets:
+      - scsi_postgres_db
+      - scsi_postgres_user
+      - scsi_postgres_password
+    environment:
+      POSTGRES_DB_FILE: /run/secrets/scsi_postgres_db
+      POSTGRES_USER_FILE: /run/secrets/scsi_postgres_user
+      POSTGRES_PASSWORD_FILE: /run/secrets/scsi_postgres_password
+    volumes:
+      - dr_jesus_pg_data:/var/lib/postgresql/data
+    networks:
+      - scsi_data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$(cat /run/secrets/scsi_postgres_user) -d $$(cat /run/secrets/scsi_postgres_db) || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+        reservations:
+          cpus: "0.25"
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # 4. CACHE & CHANNELS: Redis 7 com autenticação protegida por Docker Secret
+  # ----------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    secrets:
+      - scsi_redis_password
+    command:
+      - "sh"
+      - "-c"
+      - 'exec redis-server --requirepass "$$(cat /run/secrets/scsi_redis_password)" --save 60 1 --loglevel notice'
+    volumes:
+      - dr_jesus_redis_data:/data
+    networks:
+      - scsi_internal
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$(cat /run/secrets/scsi_redis_password)\" ping | grep PONG || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 15s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "0.50"
+          memory: 256M
+        reservations:
+          cpus: "0.10"
+          memory: 64M
+
+  # ----------------------------------------------------------------------------
+  # 5. BROKER AMQP: RabbitMQ 3.13 com senhas protegidas por Docker Secret
+  # ----------------------------------------------------------------------------
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    secrets:
+      - scsi_rabbitmq_user
+      - scsi_rabbitmq_password
+    environment:
+      RABBITMQ_DEFAULT_USER_FILE: /run/secrets/scsi_rabbitmq_user
+      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/scsi_rabbitmq_password
+    volumes:
+      - dr_jesus_rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - scsi_internal
+    healthcheck:
+      test: ["CMD-SHELL", "rabbitmq-diagnostics -q ping || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "0.75"
+          memory: 512M
+        reservations:
+          cpus: "0.15"
+          memory: 128M
+
+  # ----------------------------------------------------------------------------
+  # 6. CELERY WORKER: Processamento assíncrono e orquestração de IA (LangGraph)
+  # ----------------------------------------------------------------------------
+  celery_worker:
+    image: scsi/backend:latest
+    command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "default,ia_tasks", "-c", "2"]
+    secrets:
+      - scsi_django_secret_key
+      - scsi_postgres_db
+      - scsi_postgres_user
+      - scsi_postgres_password
+      - scsi_redis_password
+      - scsi_rabbitmq_user
+      - scsi_rabbitmq_password
+    environment:
+      DEBUG: "False"
+      POSTGRES_HOST: "db"
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: "5672"
+      OLLAMA_HOST: "http://ollama:11434"
+    volumes:
+      - dr_jesus_media_data:/app/media
+    networks:
+      - scsi_internal
+      - scsi_data
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A core inspect ping -d celery@$$HOSTNAME || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+        reservations:
+          cpus: "0.20"
+          memory: 256M
+
+  # ----------------------------------------------------------------------------
+  # 7. MOTOR COGNITIVO LOCAL: Ollama (Llama 3.2 3B e nomic-embed-text)
+  # ----------------------------------------------------------------------------
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - dr_jesus_ollama_data:/root/.ollama
+    networks:
+      - scsi_internal
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "2.00"
+          memory: 4096M
+        reservations:
+          cpus: "0.50"
+          memory: 1024M
+
+# ==============================================================================
+# ISOLAMENTO DE REDES EM 3 ZONAS (ZERO TRUST DE REDE)
+# ==============================================================================
+networks:
+  # Zona 1: Borda Externa (Ingress / Traefik / Frontend / Backend)
+  scsi_public:
+    external: true
+  # Zona 2: Aplicação, Mensageria e IA Local
+  scsi_internal:
+    driver: overlay
+    internal: false
+  # Zona 3: Blindagem de Dados (PostgreSQL + RAG) — Sem acesso à Internet
+  scsi_data:
+    driver: overlay
+    internal: true
+
+# ==============================================================================
+# GOVERNANÇA DE VOLUMES PERSISTENTES
+# ==============================================================================
+volumes:
+  dr_jesus_pg_data:
+    driver: local
+  dr_jesus_redis_data:
+    driver: local
+  dr_jesus_rabbitmq_data:
+    driver: local
+  dr_jesus_ollama_data:
+    driver: local
+  dr_jesus_media_data:
+    driver: local
+  dr_jesus_static_data:
+    driver: local
+
+# ==============================================================================
+# MATRIZ DE SEGREDOS CRIPTOGRAFADOS (DOCKER SECRETS NO RAFT - TMPFS EM RAM)
+# ==============================================================================
+secrets:
+  scsi_django_secret_key:
+    external: true
+  scsi_postgres_db:
+    external: true
+  scsi_postgres_user:
+    external: true
+  scsi_postgres_password:
+    external: true
+  scsi_redis_password:
+    external: true
+  scsi_rabbitmq_user:
+    external: true
+  scsi_rabbitmq_password:
+    external: true

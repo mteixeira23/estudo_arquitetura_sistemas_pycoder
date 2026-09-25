@@ -1,0 +1,31 @@
+# ==============================================================================
+# CONFIGURAÇÃO DINÂMICA DE TLS — ARQUITETURA SCSI (/etc/traefik/dynamic/tls.yml)
+# Padrão: Cloudflare Origin CA (15 anos) montado via Docker Secrets com Cifras AEAD
+# ==============================================================================
+tls:
+  stores:
+    default:
+      defaultCertificate:
+        certFile: "/run/secrets/scsi_origin_crt"
+        keyFile: "/run/secrets/scsi_origin_key"
+
+  options:
+    default:
+      minVersion: "VersionTLS12"
+      cipherSuites:
+        # Cifras AEAD Modernas (TLS 1.2 / TLS 1.3)
+        - "TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_ECDSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_AES_128_GCM_SHA256"
+        - "TLS_AES_256_GCM_SHA384"
+        - "TLS_CHACHA20_POLY1305_SHA256"
+      curvePreferences:
+        - "X25519"      # Curva elíptica de alta performance (TLS 1.3)
+        - "CurveP256"
+        - "CurveP384"
+        - "CurveP521"
+      sniStrict: true   # Rejeita requisições com SNI divergente (blindagem contra probes por IP direto)
