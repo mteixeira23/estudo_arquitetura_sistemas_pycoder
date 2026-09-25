@@ -28,4 +28,4 @@ tls:
         - "CurveP256"
         - "CurveP384"
         - "CurveP521"
-      sniStrict: true   # Rejeita requisições com SNI divergente (blindagem contra probes por IP direto)
+      sniStrict: false   # Permite negociação TLS com a borda Cloudflare para todos os domínios roteados

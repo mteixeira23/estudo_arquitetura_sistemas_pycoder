@@ -51,7 +51,7 @@ services:
           memory: 64M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.scsi-front.rule=Host(`app.scsi.pycoder.com.br`) || Host(`scsi.pycoder.com.br`)"
+        - "traefik.http.routers.scsi-front.rule=Host(`singulariconsult.com.br`) || Host(`www.singulariconsult.com.br`) || Host(`app.singulariconsult.com.br`) || Host(`app.scsi.pycoder.com.br`) || Host(`scsi.pycoder.com.br`)"
         - "traefik.http.routers.scsi-front.entrypoints=websecure"
         - "traefik.http.routers.scsi-front.tls=true"
         - "traefik.http.routers.scsi-front.middlewares=scsi-headers@file,scsi-compress@file"
@@ -129,7 +129,7 @@ services:
           memory: 256M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.scsi-api.rule=Host(`api.scsi.pycoder.com.br`)"
+        - "traefik.http.routers.scsi-api.rule=Host(`api.singulariconsult.com.br`) || Host(`api.scsi.pycoder.com.br`)"
         - "traefik.http.routers.scsi-api.entrypoints=websecure"
         - "traefik.http.routers.scsi-api.tls=true"
         - "traefik.http.routers.scsi-api.middlewares=scsi-headers@file,scsi-compress@file"

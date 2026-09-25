@@ -95,7 +95,7 @@ services:
       labels:
         - "traefik.enable=true"
         # Roteador Seguro do Dashboard com Host e BasicAuth
-        - "traefik.http.routers.traefik-dash.rule=Host(`traefik.scsi.pycoder.com.br`)"
+        - "traefik.http.routers.traefik-dash.rule=Host(`traefik.singulariconsult.com.br`) || Host(`traefik.scsi.pycoder.com.br`)"
         - "traefik.http.routers.traefik-dash.entrypoints=websecure"
         - "traefik.http.routers.traefik-dash.service=api@internal"
         - "traefik.http.routers.traefik-dash.tls=true"
