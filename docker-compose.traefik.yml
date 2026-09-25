@@ -51,7 +51,9 @@ services:
 
   # 2. Ingress Controller e Reverse Proxy Central (Traefik v3.1)
   traefik:
-    image: traefik:v3.1
+    image: traefik:latest
+    environment:
+      - DOCKER_API_VERSION=1.45
     command:
       - "--configFile=/etc/traefik/traefik.yml"
     ports:
