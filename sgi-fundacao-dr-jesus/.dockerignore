@@ -1,0 +1,14 @@
+node_modules
+dist
+.git
+.vercel
+.env
+.env.*
+capture_live_screenshots.cjs
+inspect_1vh.cjs
+scratch_e2e_test.js
+test_*.cjs
+verify_screens.cjs
+generate_pdf.py
+planejamento_10K.html
+README.md

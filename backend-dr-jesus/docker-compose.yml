@@ -1,0 +1,254 @@
+version: '3.8'
+
+# ==============================================================================
+# 🐳 Docker Compose Mestre — Arquitetura Soberana SCSI (Padrão PycoderBR)
+# Projeto: SGI Fundação Dr. Jesus
+# 7 Serviços Unificados e Isolamento Estrito em 3 Redes (Defesa em Profundidade)
+# ==============================================================================
+
+services:
+  # --- 1. Camada de Apresentação (Frontend React SPA / Nginx) ---
+  # Zona: scsi_public
+  frontend:
+    build:
+      context: ../sgi-fundacao-dr-jesus
+      dockerfile: Dockerfile
+    container_name: dr_jesus_frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks:
+      - scsi_public
+
+  # --- 2. Camada de Aplicação (Backend Django 5 ASGI / Daphne) ---
+  # Zona: Ponte entre scsi_public (Ingress), scsi_internal (Mensageria/IA) e scsi_data (Postgres)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dr_jesus_backend
+    restart: unless-stopped
+    command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - POSTGRES_DB=${POSTGRES_DB:-dr_jesus_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - OLLAMA_BASE_URL=http://ollama:11434
+    ports:
+      - "8000:8000"
+    volumes:
+      - media_data:/app/media
+      - static_data:/app/staticfiles
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      ollama:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/api/schema/').read()\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+    deploy:
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+    networks:
+      - scsi_public
+      - scsi_internal
+      - scsi_data
+
+  # --- 3. Camada de Processamento Assíncrono (Celery Workers) ---
+  # Zona: scsi_internal (Mensageria/IA) e scsi_data (Leitura/escrita no DB)
+  celery_worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: dr_jesus_celery_worker
+    restart: unless-stopped
+    command: ["celery", "-A", "core", "worker", "-l", "info", "-Q", "default,ia_tasks", "--concurrency=2", "--max-tasks-per-child=50", "--max-memory-per-child=300000"]
+    env_file:
+      - .env
+    environment:
+      - DJANGO_SETTINGS_MODULE=core.settings
+      - POSTGRES_DB=${POSTGRES_DB:-dr_jesus_db}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-postgres}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - REDIS_URL=redis://redis:6379/1
+      - CELERY_BROKER_URL=amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD:-guest}@rabbitmq:5672//
+      - CELERY_RESULT_BACKEND=redis://redis:6379/2
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - media_data:/app/media
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    deploy:
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+    networks:
+      - scsi_internal
+      - scsi_data
+
+
+  # --- 4. Camada de Persistência Relacional & Vetorial (PostgreSQL 16 + pgvector) ---
+  # Zona: scsi_data (REDE ISOLADA SEM SAÍDA EXTERNA - internal: true)
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: dr_jesus_db
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-dr_jesus_db}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-dr_jesus_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scsi_data
+
+  # --- 5. Camada de Cache Volátil & WebSockets (Redis 7 Alpine) ---
+  # Zona: scsi_internal
+  redis:
+    image: redis:7-alpine
+    container_name: dr_jesus_redis
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - scsi_internal
+
+  # --- 6. Camada de Mensageria Corporativa (RabbitMQ 3 Alpine) ---
+  # Zona: scsi_internal
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: dr_jesus_rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
+    ports:
+      - "5672:5672"     # AMQP Broker para Celery
+      - "15672:15672"   # Management Dashboard local
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+    networks:
+      - scsi_internal
+
+  # --- 7. Camada de Inteligência Artificial Local (Ollama) ---
+  # Zona: scsi_internal
+  ollama:
+    image: ollama/ollama:latest
+    container_name: dr_jesus_ollama
+    restart: unless-stopped
+    environment:
+      - OLLAMA_NUM_PARALLEL=1
+      - OLLAMA_MAX_LOADED_MODELS=1
+      - OLLAMA_KEEP_ALIVE=60s
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:11434/api/tags || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 4.0G
+        reservations:
+          memory: 2.0G
+    networks:
+      - scsi_internal
+
+# ==============================================================================
+# 🔒 Redes Segregadas do Cluster SCSI (Princípio do Menor Privilégio e Zero Trust)
+# ==============================================================================
+networks:
+  # Zona 1: Borda e Apresentação (Apenas Frontend Nginx e Backend Ingress)
+  scsi_public:
+    name: scsi_public_network
+    driver: bridge
+
+  # Zona 2: Aplicação, Barramento de Eventos e IA (Backend, Celery, Redis, RabbitMQ, Ollama)
+  scsi_internal:
+    name: scsi_internal_network
+    driver: bridge
+
+  # Zona 3: Persistência Sensível (Apenas Backend, Celery e PostgreSQL - SEM SAÍDA EXTERNA)
+  scsi_data:
+    name: scsi_data_network
+    driver: bridge
+    internal: true
+
+# ==============================================================================
+# 💾 Volumes Persistentes Soberanos
+# ==============================================================================
+volumes:
+  pg_data:
+    name: dr_jesus_pg_data
+    driver: local
+  redis_data:
+    name: dr_jesus_redis_data
+    driver: local
+  rabbitmq_data:
+    name: dr_jesus_rabbitmq_data
+    driver: local
+  ollama_data:
+    name: dr_jesus_ollama_data
+    driver: local
+  media_data:
+    name: dr_jesus_media_data
+    driver: local
+  static_data:
+    name: dr_jesus_static_data
+    driver: local

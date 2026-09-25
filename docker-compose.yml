@@ -12,7 +12,7 @@ services:
   frontend:
     image: scsi/frontend:latest
     build:
-      context: ../sgi-fundacao-dr-jesus
+      context: ./sgi-fundacao-dr-jesus
       dockerfile: Dockerfile
     networks:
       - scsi_public
@@ -63,7 +63,7 @@ services:
   backend:
     image: scsi/backend:latest
     build:
-      context: ../backend-dr-jesus
+      context: ./backend-dr-jesus
       dockerfile: Dockerfile
     command: ["daphne", "-b", "0.0.0.0", "-p", "8000", "core.asgi:application"]
     secrets:

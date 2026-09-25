@@ -22,8 +22,8 @@ C_PURPLE = "\033[95m"
 C_RESET = "\033[0m"
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-BACKEND_DIR = BASE_DIR.parent / "backend-dr-jesus"
-FRONTEND_DIR = BASE_DIR.parent / "sgi-fundacao-dr-jesus"
+BACKEND_DIR = BASE_DIR / "backend-dr-jesus" if (BASE_DIR / "backend-dr-jesus").is_dir() else BASE_DIR.parent / "backend-dr-jesus"
+FRONTEND_DIR = BASE_DIR / "sgi-fundacao-dr-jesus" if (BASE_DIR / "sgi-fundacao-dr-jesus").is_dir() else BASE_DIR.parent / "sgi-fundacao-dr-jesus"
 
 def check_unix_lf(path: Path) -> bool:
     """Valida terminação de linha Unix LF pura (ADR 007)."""

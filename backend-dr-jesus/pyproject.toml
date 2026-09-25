@@ -1,0 +1,36 @@
+[project]
+name = "backend-dr-jesus"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+authors = [
+    { name = "mteixeira23", email = "marcos.vinicius2323@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "celery>=5.6.3",
+    "channels>=4.3.2",
+    "channels-redis>=4.3.0",
+    "daphne>=4.2.3",
+    "django>=6.1.1",
+    "django-celery-results>=2.6.0",
+    "django-cors-headers>=4.9.0",
+    "djangorestframework>=3.18.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "drf-spectacular>=0.30.0",
+    "langchain>=1.4.2",
+    "langchain-community>=0.4.2",
+    "langchain-ollama>=1.1.0",
+    "langgraph>=1.2.12",
+    "pgvector>=0.5.0",
+    "psycopg2-binary>=2.9.13",
+    "python-dotenv>=1.2.3",
+    "uuid6>=2025.0.1",
+]
+
+[project.scripts]
+backend-dr-jesus = "backend_dr_jesus:main"
+
+[build-system]
+requires = ["uv_build>=0.12.7,<0.13.0"]
+build-backend = "uv_build"

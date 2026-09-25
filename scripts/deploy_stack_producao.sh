@@ -52,8 +52,17 @@ done
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
-FRONTEND_DIR="${BASE_DIR}/../sgi-fundacao-dr-jesus"
-BACKEND_DIR="${BASE_DIR}/../backend-dr-jesus"
+if [[ -d "${BASE_DIR}/sgi-fundacao-dr-jesus" ]]; then
+  FRONTEND_DIR="${BASE_DIR}/sgi-fundacao-dr-jesus"
+else
+  FRONTEND_DIR="${BASE_DIR}/../sgi-fundacao-dr-jesus"
+fi
+
+if [[ -d "${BASE_DIR}/backend-dr-jesus" ]]; then
+  BACKEND_DIR="${BASE_DIR}/backend-dr-jesus"
+else
+  BACKEND_DIR="${BASE_DIR}/../backend-dr-jesus"
+fi
 
 # ------------------------------------------------------------------------------
 # 1. VALIDAÇÃO DE PRÉ-REQUISITOS OPERACIONAIS

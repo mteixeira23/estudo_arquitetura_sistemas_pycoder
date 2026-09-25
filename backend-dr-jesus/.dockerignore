@@ -1,0 +1,23 @@
+# ==========================================
+# .dockerignore: Backend Django SCSI
+# ==========================================
+.git
+.gitignore
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov/
+media/*
+!media/.gitkeep
+staticfiles/*
+!staticfiles/.gitkeep
+.env
+.env.local
+docker-compose.yml
+init.sql
+README.md
