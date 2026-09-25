@@ -76,9 +76,8 @@ entryPoints:
 
 providers:
   # Provedor Dinâmico via Docker Swarm isolado por Socket Proxy (Zero acesso ao socket físico)
-  docker:
+  swarm:
     endpoint: "tcp://socket-proxy:2375"
-    swarmMode: true
     exposedByDefault: false
     network: "scsi_public"
 
