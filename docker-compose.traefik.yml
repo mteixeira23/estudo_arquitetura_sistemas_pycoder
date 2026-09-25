@@ -109,8 +109,7 @@ networks:
     external: true
   # Rede interna estrita para comunicação entre Traefik e Socket Proxy
   scsi_socket_net:
-    driver: overlay
-    internal: true
+    external: true
 
 secrets:
   scsi_origin_crt:

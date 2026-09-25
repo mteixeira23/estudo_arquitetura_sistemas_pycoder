@@ -57,9 +57,10 @@ COPY --from=builder --chown=scsiuser:scsi /app/.venv /app/.venv
 # Copia o código-fonte da aplicação
 COPY --chown=scsiuser:scsi . .
 
-# Criação e permissão dos volumes de mídia e estáticos
+# Criação e permissão dos volumes de mídia e estáticos e permissão de execução do entrypoint
 RUN mkdir -p /app/media /app/staticfiles && \
-    chown -R scsiuser:scsi /app/media /app/staticfiles
+    chmod +x /app/entrypoint.sh && \
+    chown -R scsiuser:scsi /app/media /app/staticfiles /app/entrypoint.sh
 
 # Alterna para o usuário não-root
 USER scsiuser
@@ -68,7 +69,7 @@ USER scsiuser
 EXPOSE 8000
 
 # Script de entrada para migrações e checagens defensivas
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/bin/sh", "/app/entrypoint.sh"]
 
 # Probe de saúde nativa em Python puro (sem utilitários externos de rede)
 HEALTHCHECK --interval=15s --timeout=5s --start-period=15s --retries=3 \
