@@ -231,9 +231,7 @@ services:
     secrets:
       - scsi_rabbitmq_user
       - scsi_rabbitmq_password
-    environment:
-      RABBITMQ_DEFAULT_USER_FILE: /run/secrets/scsi_rabbitmq_user
-      RABBITMQ_DEFAULT_PASS_FILE: /run/secrets/scsi_rabbitmq_password
+    command: ["sh", "-c", "export RABBITMQ_DEFAULT_USER=$$(cat /run/secrets/scsi_rabbitmq_user) && export RABBITMQ_DEFAULT_PASS=$$(cat /run/secrets/scsi_rabbitmq_password) && exec docker-entrypoint.sh rabbitmq-server"]
     volumes:
       - dr_jesus_rabbitmq_data:/var/lib/rabbitmq
     networks:
