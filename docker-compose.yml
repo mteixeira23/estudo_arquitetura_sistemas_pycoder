@@ -76,9 +76,9 @@ services:
       - scsi_rabbitmq_password
     environment:
       DEBUG: "False"
-      ALLOWED_HOSTS: "api.scsi.pycoder.com.br,localhost,127.0.0.1,backend"
-      CORS_ALLOWED_ORIGINS: "https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br"
-      CSRF_TRUSTED_ORIGINS: "https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br,https://api.scsi.pycoder.com.br"
+      ALLOWED_HOSTS: "singulariconsult.com.br,www.singulariconsult.com.br,app.singulariconsult.com.br,api.singulariconsult.com.br,api.scsi.pycoder.com.br,localhost,127.0.0.1,backend"
+      CORS_ALLOWED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://app.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br"
+      CSRF_TRUSTED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://app.singulariconsult.com.br,https://api.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br,https://api.scsi.pycoder.com.br"
       POSTGRES_HOST: "db"
       POSTGRES_PORT: "5432"
       REDIS_HOST: "redis"
