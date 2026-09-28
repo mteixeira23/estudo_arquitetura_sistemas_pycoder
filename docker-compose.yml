@@ -362,6 +362,7 @@ services:
   # ----------------------------------------------------------------------------
   hermes_agent:
     image: nousresearch/hermes-agent:latest
+    command: ["dashboard", "--host", "0.0.0.0", "--port", "9119", "--no-open", "--insecure"]
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - HERMES_UID=1000
@@ -399,7 +400,7 @@ services:
         - "traefik.http.routers.scsi-hermes.entrypoints=websecure"
         - "traefik.http.routers.scsi-hermes.tls=true"
         - "traefik.http.routers.scsi-hermes.middlewares=scsi-headers@file,scsi-compress@file"
-        - "traefik.http.services.scsi-hermes.loadbalancer.server.port=8642"
+        - "traefik.http.services.scsi-hermes.loadbalancer.server.port=9119"
 
 # ==============================================================================
 # ISOLAMENTO DE REDES EM 3 ZONAS (ZERO TRUST DE REDE)
