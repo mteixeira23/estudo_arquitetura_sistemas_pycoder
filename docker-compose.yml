@@ -357,6 +357,50 @@ services:
           cpus: "0.50"
           memory: 1024M
 
+  # ----------------------------------------------------------------------------
+  # 8. AGENTE AUTÔNOMO COGNITIVO: Hermes Agent (Nous Research / OpenRouter)
+  # ----------------------------------------------------------------------------
+  hermes_agent:
+    image: nousresearch/hermes-agent:latest
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - HERMES_UID=1000
+      - HERMES_GID=1000
+      - SGI_API_BASE_URL=https://api.singulariconsult.com.br/api/v1
+    volumes:
+      - dr_jesus_hermes_data:/opt/data
+    networks:
+      - scsi_public
+      - scsi_internal
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: start-first
+        failure_action: rollback
+        monitor: 20s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "1.00"
+          memory: 1024M
+        reservations:
+          cpus: "0.20"
+          memory: 256M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.scsi-hermes.rule=Host(`hermes.singulariconsult.com.br`)"
+        - "traefik.http.routers.scsi-hermes.entrypoints=websecure"
+        - "traefik.http.routers.scsi-hermes.tls=true"
+        - "traefik.http.routers.scsi-hermes.middlewares=scsi-headers@file,scsi-compress@file"
+        - "traefik.http.services.scsi-hermes.loadbalancer.server.port=8642"
+
 # ==============================================================================
 # ISOLAMENTO DE REDES EM 3 ZONAS (ZERO TRUST DE REDE)
 # ==============================================================================
@@ -388,6 +432,8 @@ volumes:
   dr_jesus_media_data:
     driver: local
   dr_jesus_static_data:
+    driver: local
+  dr_jesus_hermes_data:
     driver: local
 
 # ==============================================================================
