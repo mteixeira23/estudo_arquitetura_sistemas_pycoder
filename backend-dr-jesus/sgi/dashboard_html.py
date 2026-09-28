@@ -643,6 +643,233 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       line-height: 1.35;
     }
 
+    /* Hermes SRE Section (Fase 5) */
+    .hermes-section {
+      margin-bottom: 2rem;
+    }
+    .hermes-card {
+      background: linear-gradient(135deg, rgba(24, 24, 37, 0.95), rgba(15, 23, 42, 0.95));
+      border: 1px solid rgba(236, 72, 153, 0.35);
+      border-radius: 14px;
+      padding: 1.25rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+    }
+    .hermes-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .hermes-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 0.85rem;
+    }
+    .hermes-icon {
+      font-size: 1.8rem;
+      background: rgba(236, 72, 153, 0.15);
+      width: 48px;
+      height: 48px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      border: 1px solid rgba(236, 72, 153, 0.4);
+    }
+    .hermes-badge {
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      color: #fff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      letter-spacing: 0.03em;
+    }
+    .hermes-badge-sub {
+      background: rgba(14, 165, 233, 0.15);
+      color: #38bdf8;
+      border: 1px solid rgba(14, 165, 233, 0.4);
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+    }
+    .btn-hermes {
+      background: linear-gradient(135deg, #ec4899, #be185d);
+      color: #ffffff;
+      box-shadow: 0 2px 10px rgba(236, 72, 153, 0.35);
+      border: none;
+    }
+    .btn-hermes:hover {
+      background: linear-gradient(135deg, #f472b6, #db2777);
+      transform: translateY(-1px);
+    }
+    .hermes-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      background: rgba(15, 23, 42, 0.6);
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      padding: 0.85rem;
+    }
+    .hermes-input-group {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+    .hermes-input {
+      flex: 1;
+      min-width: 260px;
+      background: #090d16;
+      border: 1px solid #334155;
+      color: #f1f5f9;
+      padding: 0.5rem 0.85rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .hermes-input:focus {
+      border-color: #ec4899;
+    }
+    .hermes-quick-buttons {
+      display: flex;
+      gap: 0.4rem;
+      flex-wrap: wrap;
+    }
+    .btn-chip {
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      border-radius: 6px;
+      padding: 0.25rem 0.6rem;
+      font-size: 0.75rem;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-chip:hover {
+      background: #334155;
+      color: #f8fafc;
+      border-color: #0ea5e9;
+    }
+    .hermes-terminal {
+      background: #030712;
+      border: 1px solid #1f2937;
+      border-radius: 10px;
+      overflow: hidden;
+      font-family: var(--font-mono);
+      margin-top: 1rem;
+    }
+    .terminal-bar {
+      background: #111827;
+      padding: 0.5rem 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      border-bottom: 1px solid #1f2937;
+    }
+    .terminal-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+    .terminal-dot.red { background: #ef4444; }
+    .terminal-dot.yellow { background: #f59e0b; }
+    .terminal-dot.green { background: #10b981; }
+    .terminal-title {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #cbd5e1;
+      margin-left: 0.5rem;
+    }
+    .terminal-time {
+      font-size: 0.7rem;
+      color: #64748b;
+      margin-left: auto;
+    }
+    .terminal-body {
+      padding: 1rem;
+      font-size: 0.8rem;
+      color: #e2e8f0;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 350px;
+      overflow-y: auto;
+    }
+    .recs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 0.6rem;
+    }
+    .rec-card {
+      background: rgba(236, 72, 153, 0.08);
+      border-left: 3px solid #ec4899;
+      padding: 0.6rem 0.8rem;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      color: #f1f5f9;
+    }
+    .guardians-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 0.75rem;
+    }
+    .guardian-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.75rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      transition: all 0.2s;
+    }
+    .guardian-card:hover {
+      border-color: #38bdf8;
+      background: #131d33;
+    }
+    .guardian-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 0.4rem;
+    }
+    .guardian-name {
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .guardian-role {
+      font-size: 0.68rem;
+      color: #94a3b8;
+    }
+    .guardian-meta {
+      font-size: 0.7rem;
+      color: #cbd5e1;
+      font-family: var(--font-mono);
+      margin: 0.4rem 0;
+    }
+    .guardian-btn {
+      width: 100%;
+      background: #1e293b;
+      border: 1px solid #334155;
+      color: #cbd5e1;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.72rem;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.4rem;
+      transition: all 0.2s;
+    }
+    .guardian-btn:hover {
+      background: #0284c7;
+      color: #fff;
+      border-color: #0284c7;
+    }
+
     footer {
       text-align: center;
       font-size: 0.75rem;
@@ -750,6 +977,90 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       <button class="btn btn-secondary" onclick="executeAction('trigger_backup', this)">
         <span>📦</span> Snapshot Transacional
       </button>
+    </div>
+  </section>
+
+  <!-- Hermes SRE Orchestrator & Container Guardians (Fase 5) -->
+  <section class="hermes-section">
+    <div class="hermes-card">
+      <div class="hermes-header">
+        <div class="hermes-title-wrap">
+          <div class="hermes-icon">🤖</div>
+          <div>
+            <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+              <h2 style="font-size: 1.25rem; font-weight: 700; color: #fdf2f8;">Hermes Agent — Chief SRE Leader & AIOps</h2>
+              <span class="hermes-badge">Nous Research</span>
+              <span class="hermes-badge-sub">10 Guardiões Ativos</span>
+            </div>
+            <p style="font-size: 0.8rem; color: #cbd5e1; margin-top: 0.2rem;">
+              Orquestrador cognitivo de SRE para supervisão contínua, Tool Calling cirúrgico em microsserviços e governança Human-in-the-Loop.
+            </p>
+          </div>
+        </div>
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <div style="text-align: right; margin-right: 0.5rem;">
+            <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Score da Patrulha</div>
+            <div id="hermesHealthScore" style="font-size: 1.3rem; font-weight: 800; color: #38bdf8; font-family: var(--font-mono);">--%</div>
+          </div>
+          <button class="btn btn-hermes" id="btnHermesPatrol" onclick="executeHermesCommand('Auditoria geral de todos os containers', 'full', this)">
+            <span>⚡</span> Disparar Patrulha Completa
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick Command Bar -->
+      <div class="hermes-controls">
+        <div class="hermes-input-group">
+          <input type="text" id="hermesCustomPrompt" class="hermes-input" placeholder="Comande o Hermes (ex: 'Verificar latência do PostgreSQL e DLQ', 'Inspecionar tensores do Ollama')..." onkeydown="if(event.key === 'Enter') triggerCustomHermes()">
+          <button class="btn btn-primary" onclick="triggerCustomHermes()">
+            <span>💬</span> Consultar Hermes
+          </button>
+        </div>
+        <div class="hermes-quick-buttons">
+          <button class="btn-chip" onclick="executeHermesCommand('Auditar banco de dados e pgvector', 'database', this)">🐘 Postgres 16</button>
+          <button class="btn-chip" onclick="executeHermesCommand('Auditar RabbitMQ e contingência DLQ', 'rabbitmq', this)">🐰 RabbitMQ / DLQ</button>
+          <button class="btn-chip" onclick="executeHermesCommand('Auditar tarefas ativas e crontab do Celery', 'celery', this)">⚙️ Celery & Beat</button>
+          <button class="btn-chip" onclick="executeHermesCommand('Auditar tensores e memória do Ollama', 'ollama', this)">🧠 Ollama RAM</button>
+          <button class="btn-chip" onclick="executeHermesCommand('Auditar segurança e conformidade LGPD', 'security', this)">🛡️ Segurança & LGPD</button>
+        </div>
+      </div>
+
+      <!-- Hermes Output Terminal & Recommendations -->
+      <div id="hermesReportContainer" style="display: none; margin-top: 1.25rem;">
+        <div class="hermes-terminal">
+          <div class="terminal-bar">
+            <span class="terminal-dot red"></span>
+            <span class="terminal-dot yellow"></span>
+            <span class="terminal-dot green"></span>
+            <span class="terminal-title" id="hermesTerminalTitle">Laudo Pericial — Hermes SRE Agent</span>
+            <span class="terminal-time" id="hermesTerminalTime">--:--:--</span>
+          </div>
+          <div class="terminal-body" id="hermesTerminalBody">
+            <!-- Texto e diagnóstico formatado -->
+          </div>
+        </div>
+
+        <!-- Recomendações Human-in-the-Loop -->
+        <div id="hermesRecsBox" style="margin-top: 1rem; display: none;">
+          <div style="font-size: 0.8rem; font-weight: 700; color: #f472b6; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            <span>💡</span> Recomendações Técnicas do Maestro SRE (Human-in-the-Loop):
+          </div>
+          <div id="hermesRecsList" class="recs-grid"></div>
+        </div>
+      </div>
+
+      <!-- Grid dos 10 Guardiões Especialistas por Container -->
+      <div style="margin-top: 1.5rem; border-top: 1px solid rgba(236, 72, 153, 0.2); padding-top: 1rem;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem; flex-wrap: wrap; gap: 0.5rem;">
+          <div style="font-size: 0.85rem; font-weight: 700; color: #e2e8f0; display: flex; align-items: center; gap: 0.4rem;">
+            <span>🛡️</span> 10 Guardiões Especialistas por Container (Força-Tarefa Nível 2)
+          </div>
+          <span style="font-size: 0.72rem; color: #94a3b8;">Inspeção atômica individualizada via Tool Calling</span>
+        </div>
+        <div class="guardians-grid" id="guardiansGrid">
+          <!-- Injetado dinamicamente via JS -->
+        </div>
+      </div>
     </div>
   </section>
 
@@ -1302,6 +1613,161 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       }
     }
 
+    // -------------------------------------------------------------------------
+    // BANCA DE GUARDIÕES & HERMES AGENT SRE (Fase 5)
+    // -------------------------------------------------------------------------
+    const GUARDIANS_DEF = [
+      { id: 'cloudflare', name: 'Borda & WAF', role: 'cloudflare_edge_expert', container: 'Cloudflare Edge / SSL', icon: '☁️' },
+      { id: 'traefik', name: 'Ingress Controller', role: 'traefik_expert', container: 'traefik_traefik:8080', icon: '🚦' },
+      { id: 'frontend', name: 'Frontend UX', role: 'frontend_ux_expert', container: 'scsi_frontend (2 réplicas)', icon: '💻' },
+      { id: 'django', name: 'Core Web & APIs', role: 'django_core_expert', container: 'scsi_backend (2 réplicas)', icon: '🐍' },
+      { id: 'rabbitmq', name: 'Mensageria & Filas', role: 'rabbitmq_expert', container: 'scsi_rabbitmq / dlx', icon: '🐰' },
+      { id: 'celery', name: 'Tarefas & Crontab', role: 'celery_expert', container: 'celery_worker / beat', icon: '⚙️' },
+      { id: 'redis', name: 'Memória & Cache', role: 'redis_expert', container: 'scsi_redis (DB 0/1/2)', icon: '⚡' },
+      { id: 'database', name: 'Banco & Vetores', role: 'postgres_dba_expert', container: 'scsi_db (Postgres+HNSW)', icon: '🐘' },
+      { id: 'ollama', name: 'Tensores & IA', role: 'ollama_ia_expert', container: 'scsi_ollama (RAM KVM 8)', icon: '🧠' },
+      { id: 'security', name: 'Segurança & LGPD', role: 'security_compliance_expert', container: 'AuditLog / RLS / CFM', icon: '🛡️' }
+    ];
+
+    function initGuardiansGrid() {
+      const grid = document.getElementById("guardiansGrid");
+      if (!grid) return;
+      grid.innerHTML = "";
+
+      GUARDIANS_DEF.forEach(g => {
+        const card = document.createElement("div");
+        card.className = "guardian-card";
+        card.id = `guardian-card-${g.id}`;
+        card.innerHTML = `
+          <div>
+            <div class="guardian-head">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="font-size: 1.1rem;">${g.icon}</span>
+                <div>
+                  <div class="guardian-name">${g.name}</div>
+                  <div class="guardian-role">${g.role}</div>
+                </div>
+              </div>
+              <span class="badge ok" id="badge-${g.id}">Pronto</span>
+            </div>
+            <div class="guardian-meta" id="meta-${g.id}">
+              <span>Container: ${g.container}</span>
+            </div>
+          </div>
+          <button class="guardian-btn" onclick="executeHermesCommand('Inspecionar ${g.name}', '${g.id}', this)">
+            🔍 Inspecionar
+          </button>
+        `;
+        grid.appendChild(card);
+      });
+    }
+
+    async function executeHermesCommand(comando, modo, btn) {
+      const originalText = btn ? btn.innerHTML : null;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span> Analisando...';
+      }
+
+      showToast(`Hermes Agent acionado: "${comando}"...`, 'success');
+
+      try {
+        const res = await fetch('/api/ia/hermes/sre/', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ comando, modo })
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        renderHermesResult(data);
+        showToast('Patrulha SRE concluída com sucesso!', 'success');
+      } catch (err) {
+        console.error('Falha ao acionar Hermes SRE:', err);
+        showToast('Erro ao comunicar com Hermes Agent: ' + err.message, 'error');
+      } finally {
+        if (btn && originalText) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+        }
+      }
+    }
+
+    function triggerCustomHermes() {
+      const input = document.getElementById('hermesCustomPrompt');
+      const val = input ? input.value.trim() : '';
+      if (!val) {
+        showToast('Digite uma instrução para o Hermes Agent.', 'error');
+        return;
+      }
+      executeHermesCommand(val, 'auto', null);
+      input.value = '';
+    }
+
+    function renderHermesResult(data) {
+      const container = document.getElementById('hermesReportContainer');
+      const scoreEl = document.getElementById('hermesHealthScore');
+      const termTitle = document.getElementById('hermesTerminalTitle');
+      const termTime = document.getElementById('hermesTerminalTime');
+      const termBody = document.getElementById('hermesTerminalBody');
+      const recsBox = document.getElementById('hermesRecsBox');
+      const recsList = document.getElementById('hermesRecsList');
+
+      if (!container) return;
+      container.style.display = 'block';
+
+      // Score
+      const score = data.score_saude ?? '--';
+      scoreEl.innerText = `${score}%`;
+      scoreEl.style.color = score >= 90 ? '#10b981' : (score >= 75 ? '#38bdf8' : (score >= 60 ? '#f59e0b' : '#ef4444'));
+
+      // Terminal Header & Body
+      termTitle.innerText = `Laudo Pericial SRE — Status: ${data.status_geral || 'OPERACIONAL'} (${data.elapsed_ms || 0}ms)`;
+      termTime.innerText = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
+      termBody.innerText = data.sintese_executiva || 'Nenhuma síntese emitida.';
+
+      // Recomendações Human-in-the-Loop
+      const recs = data.recomendacoes || [];
+      if (recs.length > 0) {
+        recsBox.style.display = 'block';
+        recsList.innerHTML = '';
+        recs.forEach(r => {
+          const recCard = document.createElement('div');
+          recCard.className = 'rec-card';
+          recCard.innerHTML = `<span>⚡</span> ${r}`;
+          recsList.appendChild(recCard);
+        });
+      } else {
+        recsBox.style.display = 'none';
+      }
+
+      // Atualiza os cards dos guardiões com base na telemetria retornada
+      const telemetria = data.telemetria || {};
+      for (const [key, tdata] of Object.entries(telemetria)) {
+        const badge = document.getElementById(`badge-${key}`);
+        const meta = document.getElementById(`meta-${key}`);
+        if (badge) {
+          const st = (tdata.status || 'ok').toLowerCase();
+          const badgeClass = st === 'ok' ? 'ok' : (st === 'warning' ? 'warning' : 'error');
+          const badgeText = st === 'ok' ? 'Operacional' : (st === 'warning' ? 'Atenção' : 'Crítico');
+          badge.className = `badge ${badgeClass}`;
+          badge.innerText = badgeText;
+        }
+        if (meta) {
+          const lat = tdata.latency_ms ? `${tdata.latency_ms}ms` : '';
+          const detail = tdata.metricas ? JSON.stringify(tdata.metricas).substring(0, 45) + '...' : (tdata.versao || tdata.mensagem || '');
+          meta.innerHTML = `<span>${detail}</span><br><span style="color: #38bdf8;">${lat}</span>`;
+        }
+      }
+    }
+
     // Pausa auto-refresh quando aba do navegador estiver oculta e retoma ao focar
     document.addEventListener("visibilitychange", () => {
       if (document.hidden) {
@@ -1315,6 +1781,7 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
     // Inicialização ao carregar
     loadMetrics();
     updateRefreshTimer();
+    initGuardiansGrid();
   </script>
 </body>
 </html>
