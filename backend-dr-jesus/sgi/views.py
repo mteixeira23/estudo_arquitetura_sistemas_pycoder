@@ -273,7 +273,10 @@ from django.shortcuts import redirect
 from .dashboard_html import MISSION_CONTROL_HTML
 
 
-class MissionControlDashboardView(APIView):
+from django.views import View
+
+
+class MissionControlDashboardView(View):
     """
     Interface Visual 'Mission Control' (Fase 2).
     Acesso direto via navegador em /dashboard/ para administradores autenticados.
