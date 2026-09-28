@@ -325,7 +325,7 @@ services:
   # ----------------------------------------------------------------------------
   celery_beat:
     image: scsi/backend:latest
-    command: ["celery", "-A", "core", "beat", "-l", "info"]
+    command: ["celery", "-A", "core", "beat", "-l", "info", "-s", "/tmp/celerybeat-schedule"]
     secrets:
       - scsi_django_secret_key
       - scsi_postgres_db
@@ -346,6 +346,12 @@ services:
     networks:
       - scsi_internal
       - scsi_data
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import os; exit(0 if any('beat' in open(f'/proc/{p}/cmdline', errors='ignore').read() for p in os.listdir('/proc') if p.isdigit()) else 1)\""]
+      interval: 20s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
     deploy:
       mode: replicated
       replicas: 1
