@@ -298,6 +298,351 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       to { transform: translateX(0); opacity: 1; }
     }
 
+    /* Architecture Blueprint Map Section */
+    .arch-section {
+      margin-top: 2.5rem;
+      margin-bottom: 2rem;
+    }
+    .blueprint-card {
+      background: linear-gradient(145deg, #0b1120, #0d1527);
+      border: 1px solid #1e293b;
+      border-radius: 16px;
+      padding: 1.75rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+      position: relative;
+      overflow: hidden;
+    }
+    .blueprint-card::before {
+      content: "";
+      position: absolute;
+      top: 0; left: 0; right: 0; height: 3px;
+      background: linear-gradient(90deg, #f97316, #0284c7, #10b981, #8b5cf6, #ec4899);
+    }
+    .blueprint-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+      padding-bottom: 1rem;
+      border-bottom: 1px solid #1e293b;
+    }
+    .blueprint-title-wrap h2 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      color: #f8fafc;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .blueprint-title-wrap p {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      margin-top: 0.25rem;
+    }
+    .blueprint-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .bp-badge {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.25rem 0.6rem;
+      border-radius: 9999px;
+      border: 1px solid transparent;
+      letter-spacing: 0.02em;
+    }
+    .bp-badge-cf { background: rgba(249, 115, 22, 0.12); color: #fb923c; border-color: rgba(249, 115, 22, 0.3); }
+    .bp-badge-ssl { background: rgba(16, 185, 129, 0.12); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+    .bp-badge-swarm { background: rgba(2, 132, 199, 0.12); color: #38bdf8; border-color: rgba(2, 132, 199, 0.3); }
+    .bp-badge-ia { background: rgba(139, 92, 246, 0.12); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3); }
+    .bp-badge-db { background: rgba(59, 130, 246, 0.12); color: #60a5fa; border-color: rgba(59, 130, 246, 0.3); }
+
+    /* Map Layout Grid */
+    .arch-grid {
+      display: grid;
+      grid-template-columns: 280px 1fr 300px;
+      gap: 1.25rem;
+      align-items: stretch;
+    }
+    @media (max-width: 1200px) {
+      .arch-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Node Box Base */
+    .node-box {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 1rem;
+      position: relative;
+      transition: all 0.2s ease;
+    }
+    .node-box:hover {
+      border-color: #38bdf8;
+      box-shadow: 0 4px 16px rgba(14, 165, 233, 0.15);
+      transform: translateY(-2px);
+    }
+    .node-head {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      margin-bottom: 0.5rem;
+    }
+    .node-icon {
+      font-size: 1.25rem;
+      width: 32px;
+      height: 32px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .node-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      color: #f1f5f9;
+    }
+    .node-subtitle {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    .node-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.3rem;
+      margin-top: 0.6rem;
+    }
+    .node-tag {
+      font-size: 0.68rem;
+      font-family: var(--font-mono);
+      padding: 0.15rem 0.45rem;
+      border-radius: 4px;
+      background: #1e293b;
+      color: #cbd5e1;
+    }
+
+    /* Flow Connectors */
+    .flow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 0.35rem 0;
+      color: #38bdf8;
+      font-size: 0.75rem;
+      font-weight: 600;
+      gap: 0.1rem;
+    }
+    .flow-arrow-down {
+      width: 2px;
+      height: 18px;
+      background: linear-gradient(180deg, #0284c7, #38bdf8);
+      position: relative;
+    }
+    .flow-arrow-down::after {
+      content: "";
+      position: absolute;
+      bottom: -4px;
+      left: -3px;
+      width: 0;
+      height: 0;
+      border-left: 4px solid transparent;
+      border-right: 4px solid transparent;
+      border-top: 5px solid #38bdf8;
+    }
+
+    /* Column Specifics */
+    .arch-col-traffic {
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .node-user { border-left: 4px solid #0284c7; }
+    .node-cf { border-left: 4px solid #f97316; }
+    .node-ssl { border-left: 4px solid #10b981; }
+    .node-dev { border-left: 4px solid #8b5cf6; }
+    .node-git { border-left: 4px solid #e2e8f0; }
+
+    /* VPS Swarm Central Frame */
+    .vps-frame {
+      background: rgba(15, 23, 42, 0.65);
+      border: 2px dashed #0284c7;
+      border-radius: 14px;
+      padding: 1.25rem;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    .vps-badge-top {
+      position: absolute;
+      top: -12px;
+      left: 1.25rem;
+      background: #0284c7;
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.2rem 0.75rem;
+      border-radius: 6px;
+      letter-spacing: 0.04em;
+      box-shadow: 0 2px 8px rgba(2, 132, 199, 0.4);
+    }
+    .vps-networks {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.5rem;
+      font-size: 0.7rem;
+      font-family: var(--font-mono);
+      color: #94a3b8;
+    }
+    .net-pill {
+      background: #1e293b;
+      padding: 0.15rem 0.5rem;
+      border-radius: 4px;
+      border: 1px solid #334155;
+    }
+
+    /* Core Microservices Grid */
+    .services-subgrid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 0.85rem;
+    }
+    @media (max-width: 768px) {
+      .services-subgrid {
+        grid-template-columns: 1fr;
+      }
+    }
+    .node-traefik { border-top: 3px solid #0284c7; }
+    .node-django { border-top: 3px solid #10b981; grid-column: 1 / -1; }
+    .node-rabbitmq { border-top: 3px solid #f97316; }
+    .node-celery { border-top: 3px solid #16a34a; }
+    .node-beat { border-top: 3px solid #38bdf8; }
+    .node-redis { border-top: 3px solid #ef4444; }
+    .node-postgres { border-top: 3px solid #2563eb; grid-column: 1 / -1; }
+
+    /* AI Sovereign Frame */
+    .ai-frame {
+      background: rgba(88, 28, 135, 0.08);
+      border: 1px solid #7c3aed;
+      border-radius: 14px;
+      padding: 1.1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      position: relative;
+    }
+    .ai-badge-top {
+      background: #7c3aed;
+      color: #ffffff;
+      font-size: 0.7rem;
+      font-weight: 700;
+      padding: 0.2rem 0.6rem;
+      border-radius: 6px;
+      display: inline-block;
+      align-self: flex-start;
+      margin-bottom: 0.25rem;
+    }
+    .node-ollama { border-left: 4px solid #a855f7; }
+    .node-model { border-left: 4px solid #c084fc; }
+    .node-embed { border-left: 4px solid #818cf8; }
+    .node-hermes { border-left: 4px solid #ec4899; }
+
+    /* Bottom Panels: Legend & Benefits */
+    .arch-bottom-panel {
+      margin-top: 1.5rem;
+      display: grid;
+      grid-template-columns: 1fr 2fr;
+      gap: 1.25rem;
+      border-top: 1px solid #1e293b;
+      padding-top: 1.25rem;
+    }
+    @media (max-width: 900px) {
+      .arch-bottom-panel {
+        grid-template-columns: 1fr;
+      }
+    }
+    .legend-box {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .legend-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .legend-items {
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-size: 0.75rem;
+      color: #cbd5e1;
+    }
+    .legend-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+    }
+    .ind-http { background: #0284c7; }
+    .ind-amqp { background: #f97316; }
+    .ind-celery { background: #10b981; }
+    .ind-sql { background: #2563eb; }
+    .ind-redis { background: #ef4444; }
+    .ind-ia { background: #8b5cf6; }
+    .ind-git { background: #94a3b8; }
+
+    .benefits-box {
+      background: #111827;
+      border: 1px solid #1f2937;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .benefits-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 0.75rem;
+    }
+    .benefit-card {
+      background: #0f172a;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 0.75rem;
+      transition: all 0.2s;
+    }
+    .benefit-card:hover {
+      border-color: #38bdf8;
+      background: #131d33;
+    }
+    .benefit-head {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: #f8fafc;
+      margin-bottom: 0.25rem;
+    }
+    .benefit-desc {
+      font-size: 0.72rem;
+      color: #94a3b8;
+      line-height: 1.35;
+    }
+
     footer {
       text-align: center;
       font-size: 0.75rem;
@@ -415,6 +760,367 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       <!-- Injetado dinamicamente via JS -->
       <div style="grid-column: 1 / -1; text-align: center; color: var(--text-muted); padding: 3rem;">
         Carregando sondas do ecossistema...
+      </div>
+    </div>
+  </section>
+
+  <!-- Architecture Blueprint Map Replica (Padrão SCSI / PycoderBR) -->
+  <section class="arch-section">
+    <div class="blueprint-card">
+      <div class="blueprint-header">
+        <div class="blueprint-title-wrap">
+          <h2>🗺️ Arquitetura de Deploy & Topologia de Microsserviços (SCSI / SGI Dr. Jesus)</h2>
+          <p>Réplica da Topologia de Produção — Tráfego de Borda, Orquestração Swarm, Mensageria AMQP, Persistência pgvector e IA Soberana</p>
+        </div>
+        <div class="blueprint-badges">
+          <span class="bp-badge bp-badge-cf">Cloudflare Full Strict</span>
+          <span class="bp-badge bp-badge-ssl">TLS 1.3 Origin CA</span>
+          <span class="bp-badge bp-badge-swarm">Docker Swarm KVM 8</span>
+          <span class="bp-badge bp-badge-ia">Ollama Local 100% RAM</span>
+          <span class="bp-badge bp-badge-db">PostgreSQL 16 + pgvector</span>
+        </div>
+      </div>
+
+      <div class="arch-grid">
+        <!-- Coluna 1: Borda, Criptografia & Pipeline DevOps -->
+        <div class="arch-col-traffic">
+          <div class="node-box node-user">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;">👤</div>
+              <div>
+                <div class="node-title">Usuários & Clientes</div>
+                <div class="node-subtitle">Web Browser / Mobile / PWA</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">HTTPS: 443</span>
+              <span class="node-tag">WSS: 443</span>
+              <span class="node-tag">Zero Trust</span>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <span>HTTPS / WSS (Criptografado)</span>
+            <div class="flow-arrow-down"></div>
+          </div>
+
+          <div class="node-box node-cf">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(249, 115, 22, 0.15); color: #fb923c;">☁️</div>
+              <div>
+                <div class="node-title">Cloudflare Edge</div>
+                <div class="node-subtitle">Borda Global Anycast</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">DNS Anycast</span>
+              <span class="node-tag">WAF & DDoS Shield</span>
+              <span class="node-tag">Edge Caching</span>
+              <span class="node-tag">SSL Universal</span>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <span>TLS 1.3 Full Strict (Origin CA)</span>
+            <div class="flow-arrow-down"></div>
+          </div>
+
+          <div class="node-box node-ssl">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🔒</div>
+              <div>
+                <div class="node-title">SSL / TLS Origin CA</div>
+                <div class="node-subtitle">Let's Encrypt / Cloudflare</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Ponta a Ponta</span>
+              <span class="node-tag">HSTS Ativo</span>
+              <span class="node-tag">Offloading Seguro</span>
+            </div>
+          </div>
+
+          <div style="border-top: 1px dashed #334155; margin: 0.6rem 0; padding-top: 0.6rem;">
+            <div style="font-size: 0.72rem; color: #94a3b8; font-weight: 600; text-transform: uppercase; margin-bottom: 0.5rem; letter-spacing: 0.05em;">
+              🚀 Pipeline de Engenharia & CI/CD
+            </div>
+            <div class="node-box node-dev" style="margin-bottom: 0.5rem;">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(139, 92, 246, 0.15); color: #a78bfa;">💻</div>
+                <div>
+                  <div class="node-title">Ambiente Local (Dev)</div>
+                  <div class="node-subtitle">VS Code / Python 3.12 / Compose</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">Harness CLI</span>
+                <span class="node-tag">Pytest / Flake8</span>
+              </div>
+            </div>
+
+            <div class="flow-step">
+              <span>Git Push (Branch main)</span>
+              <div class="flow-arrow-down"></div>
+            </div>
+
+            <div class="node-box node-git">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(226, 232, 240, 0.15); color: #f8fafc;">🐙</div>
+                <div>
+                  <div class="node-title">GitHub Enterprise</div>
+                  <div class="node-subtitle">Repositório & CI/CD Actions</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">Deploy Scripts</span>
+                <span class="node-tag">Versionamento Semântico</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna 2: Núcleo do Servidor VPS Hostinger (Docker Swarm) -->
+        <div class="vps-frame">
+          <div class="vps-badge-top">🌐 Servidor VPS Hostinger KVM 8 (Ubuntu 24.04 LTS) — Docker Swarm Cluster</div>
+          <div class="vps-networks">
+            <span class="net-pill">Rede: scsi_public (Overlay)</span>
+            <span class="net-pill">Rede: scsi_data (Isolada)</span>
+          </div>
+
+          <!-- Traefik Ingress -->
+          <div class="node-box node-traefik">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(2, 132, 199, 0.15); color: #38bdf8;">🚦</div>
+              <div>
+                <div class="node-title">Traefik v3 Ingress Controller (Proxy Reverso)</div>
+                <div class="node-subtitle">Portas 80/443 &bull; TLS Termination &bull; Zero-Root Socket Proxy</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Roteamento Dinâmico</span>
+              <span class="node-tag">ACME Let's Encrypt</span>
+              <span class="node-tag">Certificados Automáticos</span>
+              <span class="node-tag">HTTP-to-HTTPS Redirect</span>
+            </div>
+          </div>
+
+          <div class="flow-step">
+            <span>Roteamento Interno ASGI / HTTP / WSS</span>
+            <div class="flow-arrow-down"></div>
+          </div>
+
+          <!-- Django Core Web & API -->
+          <div class="node-box node-django">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(16, 185, 129, 0.15); color: #34d399;">🐍</div>
+              <div>
+                <div class="node-title">Django 6.1 Core API & Web (ASGI Daphne)</div>
+                <div class="node-subtitle">DRF RESTful APIs &bull; WebSockets &bull; Multi-Tenancy RLS &bull; Trilha Forense</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Multi-Tenancy RLS Fail-Closed</span>
+              <span class="node-tag">Soft Delete (Lei 13.787 / 20 Anos)</span>
+              <span class="node-tag">Trilha AuditLog Imutável</span>
+              <span class="node-tag">Pool Conexões Segregado</span>
+              <span class="node-tag">Autenticação JWT / Session</span>
+            </div>
+          </div>
+
+          <!-- Microserviços de Dados, Mensageria & Background -->
+          <div class="services-subgrid">
+            <div class="node-box node-rabbitmq">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(249, 115, 22, 0.15); color: #fb923c;">🐇</div>
+                <div>
+                  <div class="node-title">RabbitMQ 3.13</div>
+                  <div class="node-subtitle">Broker AMQP / Mensageria</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">Dead Letter Queue (dlx)</span>
+                <span class="node-tag">Exchange Direct</span>
+                <span class="node-tag">Contingência de Mensagens</span>
+              </div>
+            </div>
+
+            <div class="node-box node-celery">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(22, 163, 74, 0.15); color: #4ade80;">⚙️</div>
+                <div>
+                  <div class="node-title">Celery Worker</div>
+                  <div class="node-subtitle">Tarefas Assíncronas</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">Ingestão Vetorial RAG</span>
+                <span class="node-tag">Disparo de E-mails MAILERS</span>
+                <span class="node-tag">Geração de Laudos Clínicos</span>
+              </div>
+            </div>
+
+            <div class="node-box node-beat">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8;">⏰</div>
+                <div>
+                  <div class="node-title">Celery Beat</div>
+                  <div class="node-subtitle">Agendador Periódico (Crontab)</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">Auditoria Semanal SHA-256</span>
+                <span class="node-tag">Expurgo de Sessões Expiradas</span>
+                <span class="node-tag">Warm-up de Tensores IA</span>
+              </div>
+            </div>
+
+            <div class="node-box node-redis">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(239, 68, 68, 0.15); color: #f87171;">⚡</div>
+                <div>
+                  <div class="node-title">Redis 7</div>
+                  <div class="node-subtitle">In-Memory Store & Cache</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">DB 0: Cache Geral</span>
+                <span class="node-tag">DB 1: WebSockets Channels</span>
+                <span class="node-tag">DB 2: Celery Results</span>
+              </div>
+            </div>
+
+            <div class="node-box node-postgres">
+              <div class="node-head">
+                <div class="node-icon" style="background: rgba(37, 99, 235, 0.15); color: #60a5fa;">🐘</div>
+                <div>
+                  <div class="node-title">PostgreSQL 16 + pgvector HNSW</div>
+                  <div class="node-subtitle">Persistência Relacional ACID & Busca Vetorial por Cosseno</div>
+                </div>
+              </div>
+              <div class="node-tags">
+                <span class="node-tag">CosineDistance HNSW (Index Vetorial)</span>
+                <span class="node-tag">Row-Level Security (RLS)</span>
+                <span class="node-tag">Trilha Forense AuditLog</span>
+                <span class="node-tag">Rede Isolada scsi_data (No Public IP)</span>
+                <span class="node-tag">Backups Transacionais Diários R2</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Coluna 3: Camada Cognitiva de IA Soberana -->
+        <div class="ai-frame">
+          <span class="ai-badge-top">🧠 Módulo de IA Soberana (Local no Servidor)</span>
+          <p style="font-size: 0.72rem; color: #cbd5e1; margin-bottom: 0.25rem;">
+            Execução 100% on-premise na RAM da VPS Hostinger KVM 8. Zero custo por token e conformidade absoluta com a LGPD (sem envio de dados para terceiros).
+          </p>
+
+          <div class="node-box node-ollama">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(168, 85, 247, 0.15); color: #c084fc;">🦙</div>
+              <div>
+                <div class="node-title">Ollama Engine Local</div>
+                <div class="node-subtitle">Servidor de Inferência em RAM</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Keep-Alive 24h</span>
+              <span class="node-tag">O(1) Hot Cache</span>
+              <span class="node-tag">CPU Multi-Thread Otimizado</span>
+            </div>
+          </div>
+
+          <div class="node-box node-model">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(192, 132, 252, 0.15); color: #d8b4fe;">💡</div>
+              <div>
+                <div class="node-title">Llama 3.2 3B</div>
+                <div class="node-subtitle">LLM Primária de Raciocínio</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Sumarização Clínica</span>
+              <span class="node-tag">Análise de Prontuários</span>
+              <span class="node-tag">Streaming SSE em Tempo Real</span>
+            </div>
+          </div>
+
+          <div class="node-box node-embed">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(129, 140, 248, 0.15); color: #a5b4fc;">📐</div>
+              <div>
+                <div class="node-title">nomic-embed-text</div>
+                <div class="node-subtitle">Embeddings Semânticos (768d)</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">Vetorização de Documentos</span>
+              <span class="node-tag">Ingestão Imediata Celery</span>
+              <span class="node-tag">Busca Vetorial RAG</span>
+            </div>
+          </div>
+
+          <div class="node-box node-hermes">
+            <div class="node-head">
+              <div class="node-icon" style="background: rgba(236, 72, 153, 0.15); color: #f472b6;">🤖</div>
+              <div>
+                <div class="node-title">Hermes Agent (Nous Research)</div>
+                <div class="node-subtitle">Agente Cognitivo Desacoplado</div>
+              </div>
+            </div>
+            <div class="node-tags">
+              <span class="node-tag">LangGraph State Workflows</span>
+              <span class="node-tag">Decisões Assistidas</span>
+              <span class="node-tag">Fallback Local Robusto</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Rodapé do Blueprint: Legenda & Benefícios -->
+      <div class="arch-bottom-panel">
+        <div class="legend-box">
+          <div class="legend-title">🧭 Legenda de Protocolos & Fluxos</div>
+          <div class="legend-items">
+            <div class="legend-item"><div class="legend-indicator ind-http"></div><span><strong>HTTP / HTTPS / WSS:</strong> Borda, API e WebSockets (443)</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-amqp"></div><span><strong>Mensageria AMQP:</strong> Filas RabbitMQ e contingência DLQ (5672)</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-celery"></div><span><strong>Tarefas & Beat:</strong> Processamento assíncrono e agendamentos</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-sql"></div><span><strong>PostgreSQL + pgvector:</strong> Persistência ACID e HNSW (5432)</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-redis"></div><span><strong>Redis Cache & State:</strong> Operações em RAM de baixa latência (6379)</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-ia"></div><span><strong>IA Soberana (Ollama):</strong> Inferência local na RAM KVM 8 (11434)</span></div>
+            <div class="legend-item"><div class="legend-indicator ind-git"></div><span><strong>Pipeline CI/CD:</strong> Deploy automatizado Git/GitHub</span></div>
+          </div>
+        </div>
+
+        <div class="benefits-box">
+          <div class="legend-title">⭐ Benefícios da Arquitetura de Deploy (Padrão SCSI)</div>
+          <div class="benefits-grid">
+            <div class="benefit-card">
+              <div class="benefit-head"><span>⚡</span> Escalabilidade Horizontal</div>
+              <div class="benefit-desc">Réplicas em Docker Swarm com balanceamento de carga automático e deploy zero-downtime.</div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-head"><span>🛡️</span> Alta Disponibilidade & Auto-Healing</div>
+              <div class="benefit-desc">Watchdog sentinela com reconvergência de containers, sondas healthcheck e monitoramento 24/7.</div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-head"><span>🔒</span> Soberania de Dados (LGPD Art. 6º)</div>
+              <div class="benefit-desc">IA 100% on-premise no Ollama com tensores na RAM. Nenhum dado sensível de acolhidos sai da VPS.</div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-head"><span>📜</span> Custódia Legal de 20 Anos</div>
+              <div class="benefit-desc">Soft Delete universal no Django ORM (Lei 13.787/2018) com trilha AuditLog forense imutável.</div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-head"><span>📦</span> Resiliência com DLQ & Backups R2</div>
+              <div class="benefit-desc">Tratamento de falhas assíncronas com exchange dlx no RabbitMQ e snapshots diários no Cloudflare R2.</div>
+            </div>
+            <div class="benefit-card">
+              <div class="benefit-head"><span>📊</span> Observabilidade Unificada</div>
+              <div class="benefit-desc">Mission Control Cockpit com telemetria das 9 camadas atômicas e controle operacional em 1 clique.</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </section>
