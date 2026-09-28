@@ -11,7 +11,8 @@ from .views import (
     ProntuarioStreamIAView,
     ChatGeralStreamIAView,
     HealthCheckView,
-    EcosystemMetricsView
+    EcosystemMetricsView,
+    EcosystemActionView
 )
 
 router = DefaultRouter()
@@ -26,9 +27,10 @@ urlpatterns = [
     # Probe de Saúde do Cluster Docker Swarm / Traefik
     path('health/', HealthCheckView.as_view(), name='health_check'),
 
-    # Mission Control / Dashboard de Observabilidade Unificada (Fase 1)
+    # Mission Control / Dashboard de Observabilidade Unificada (Fase 1 e Fase 3)
     path('ecosystem/status/', EcosystemMetricsView.as_view(), name='ecosystem_status'),
     path('dashboard/metrics/', EcosystemMetricsView.as_view(), name='dashboard_metrics'),
+    path('dashboard/action/', EcosystemActionView.as_view(), name='dashboard_action'),
 
     # Rotas dos ViewSets CRUD
     path('', include(router.urls)),

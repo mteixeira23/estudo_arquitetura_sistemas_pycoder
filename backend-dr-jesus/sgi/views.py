@@ -286,6 +286,37 @@ class MissionControlDashboardView(APIView):
         return HttpResponse(MISSION_CONTROL_HTML, content_type="text/html")
 
 
+from .actions import EcosystemActionsService
+
+
+class EcosystemActionView(APIView):
+    """
+    Endpoint de Ações Rápidas do Mission Control (Fase 3).
+    Permite ao operador autenticado disparar comandos de governança e manutenção.
+    """
+    permission_classes = [IsAdminUser]
+
+    def post(self, request):
+        action = request.data.get("action")
+        if action == "purge_cache":
+            result = EcosystemActionsService.purge_cache()
+        elif action == "warmup_ia":
+            result = EcosystemActionsService.warmup_ia()
+        elif action == "recalculate_health":
+            result = EcosystemActionsService.recalculate_health()
+        elif action == "trigger_backup":
+            result = EcosystemActionsService.trigger_backup()
+        else:
+            return Response(
+                {"error": f"Ação desconhecida: '{action}'. Ações válidas: purge_cache, warmup_ia, recalculate_health, trigger_backup"},
+                status=400
+            )
+
+        status_code = 200 if result.get("success") else 500
+        return Response(result, status=status_code)
+
+
+
 
 
 

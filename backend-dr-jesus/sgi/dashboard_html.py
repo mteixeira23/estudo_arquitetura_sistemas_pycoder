@@ -268,6 +268,36 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       transition: width 0.3s ease;
     }
 
+    /* Toast Notifications (Fase 3) */
+    .toast-container {
+      position: fixed;
+      top: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 0.6rem;
+    }
+    .toast {
+      background: #1e293b;
+      border: 1px solid var(--card-border);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      color: #fff;
+      font-size: 0.85rem;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.5);
+      animation: slideIn 0.3s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+    }
+    .toast.success { border-color: var(--success); }
+    .toast.error { border-color: var(--danger); }
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+
     footer {
       text-align: center;
       font-size: 0.75rem;
@@ -353,6 +383,28 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         <span class="stat-label">Operadores & Profissionais</span>
         <span class="kpi-num" id="bizUsers">--</span>
       </div>
+    </div>
+  </section>
+
+  <!-- Toast Notifications Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Quick Actions Bar (Fase 3) -->
+  <section style="margin-bottom: 2rem;">
+    <div class="section-title">⚡ Ações Operacionais & Comandos Rápidos (Fase 3)</div>
+    <div style="display: flex; gap: 0.75rem; flex-wrap: wrap;">
+      <button class="btn btn-secondary" onclick="executeAction('recalculate_health', this)">
+        <span>🔄</span> Recalcular Saúde Agora
+      </button>
+      <button class="btn btn-secondary" onclick="executeAction('purge_cache', this)">
+        <span>🧹</span> Limpar Cache Redis
+      </button>
+      <button class="btn btn-secondary" onclick="executeAction('warmup_ia', this)">
+        <span>🧠</span> Aquecer Tensores IA (Warm-up)
+      </button>
+      <button class="btn btn-secondary" onclick="executeAction('trigger_backup', this)">
+        <span>📦</span> Snapshot Transacional
+      </button>
     </div>
   </section>
 
@@ -490,6 +542,57 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       const val = parseInt(document.getElementById("refreshRate").value, 10);
       if (val > 0) {
         timerId = setInterval(loadMetrics, val);
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<span>${type === 'success' ? '✓' : '⚠️'}</span><span>${message}</span>`;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.4s ease';
+        setTimeout(() => toast.remove(), 400);
+      }, 4000);
+    }
+
+    function getCsrfToken() {
+      const match = document.cookie.match(/csrftoken=([^;]+)/);
+      return match ? match[1] : '';
+    }
+
+    async function executeAction(actionName, btn) {
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span> Executando...';
+
+      try {
+        const res = await fetch('/api/dashboard/action/', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCsrfToken()
+          },
+          body: JSON.stringify({ action: actionName })
+        });
+        const data = await res.json();
+        if (res.ok && data.success) {
+          showToast(data.message || 'Comando executado com sucesso.', 'success');
+          if (actionName === 'recalculate_health' || actionName === 'purge_cache') {
+            loadMetrics();
+          }
+        } else {
+          showToast(data.error || 'Falha ao executar comando operacional.', 'error');
+        }
+      } catch (err) {
+        showToast('Erro de conexão: ' + err.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = originalText;
       }
     }
 

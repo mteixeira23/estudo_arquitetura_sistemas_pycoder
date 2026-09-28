@@ -241,3 +241,66 @@ class EcosystemMetricsTestCase(TestCase):
         self.assertIn("rag_chunks_embedded_count", biz)
 
 
+class EcosystemActionsTestCase(TestCase):
+    """
+    Testes de Segurança e Execução dos Comandos Operacionais Rápidos (Fase 3).
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.normal_user = User.objects.create_user(username="operador_acao", password="password123")
+        self.admin_user = User.objects.create_superuser(
+            username="admin_acao_scsi", 
+            password="password123", 
+            email="admin.acao@singulariconsult.com.br"
+        )
+
+    def test_unauthenticated_action_rejected_401(self):
+        """Disparo de ação sem credenciais deve retornar 401 Unauthorized."""
+        response = self.client.post("/api/dashboard/action/", {"action": "purge_cache"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_non_admin_action_forbidden_403(self):
+        """Usuário autenticado comum não pode disparar comandos operacionais (403 Forbidden)."""
+        self.client.force_authenticate(user=self.normal_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "purge_cache"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_action_purge_cache_succeeds_200(self):
+        """Superusuário executa a purga de cache com sucesso."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "purge_cache"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get("success"))
+        self.assertIn("Cache", response.data.get("message", ""))
+
+    def test_admin_action_recalculate_health_succeeds_200(self):
+        """Superusuário recalcula a telemetria com sucesso."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "recalculate_health"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get("success"))
+        self.assertIn("report", response.data)
+
+    def test_admin_action_warmup_ia_succeeds_200(self):
+        """Superusuário dispara o warm-up dos modelos de IA com sucesso."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "warmup_ia"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get("success"))
+
+    def test_admin_action_trigger_backup_succeeds_200(self):
+        """Superusuário verifica snapshot transacional de banco com sucesso."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "trigger_backup"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data.get("success"))
+
+    def test_invalid_action_returns_400(self):
+        """Ação não reconhecida retorna HTTP 400 Bad Request."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.post("/api/dashboard/action/", {"action": "comando_inexistente"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+
+

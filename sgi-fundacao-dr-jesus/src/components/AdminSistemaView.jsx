@@ -88,13 +88,27 @@ export default function AdminSistemaView() {
     };
   }, [autoRefreshSec]);
 
-  const handleTriggerBackup = () => {
-    setIsBackupRunning(true);
-    setBackupSuccess(false);
-    setTimeout(() => {
-      setIsBackupRunning(false);
-      setBackupSuccess(true);
-    }, 2500);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [actionFeedback, setActionFeedback] = useState(null);
+
+  const handleAction = async (actionName, successMsg) => {
+    setActionLoading(actionName);
+    setActionFeedback(null);
+    try {
+      const res = await api.post('/dashboard/action/', { action: actionName });
+      if (res.data?.success) {
+        setActionFeedback({ type: 'success', message: res.data.message || successMsg });
+        if (actionName === 'recalculate_health' || actionName === 'purge_cache') {
+          fetchMetrics();
+        }
+      } else {
+        setActionFeedback({ type: 'error', message: res.data?.error || 'Falha ao executar comando operacional.' });
+      }
+    } catch (err) {
+      setActionFeedback({ type: 'error', message: err?.response?.data?.error || err.message });
+    } finally {
+      setActionLoading(null);
+    }
   };
 
   const handleClearCache = () => {
@@ -506,58 +520,140 @@ export default function AdminSistemaView() {
         </div>
       )}
 
-      {/* Tab 3: Manutenção & Ações */}
+      {/* Tab 3: Manutenção & Ações (Fase 3) */}
       {activeTab === 'maintenance' && (
         <div className="card" style={{ background: '#111827', border: '1px solid #1f2937', padding: '1.5rem' }}>
-          <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <Wrench size={20} color="#38bdf8" /> Ações Operacionais & Salvaguardas
+          <h3 style={{ fontSize: '1.15rem', color: '#ffffff', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <Wrench size={20} color="#38bdf8" /> Ações Operacionais & Salvaguardas do Ecossistema (Fase 3)
           </h3>
+          <p style={{ fontSize: '0.82rem', color: '#94a3b8', marginBottom: '1.25rem' }}>
+            Comandos de governança e controle direto da infraestrutura executados sob autenticação administrativa estrita (IsAdminUser).
+          </p>
 
-          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-            <button
-              onClick={handleTriggerBackup}
-              disabled={isBackupRunning}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                background: '#0284c7',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
-                cursor: 'pointer'
-              }}
-            >
-              <Download size={18} />
-              {isBackupRunning ? 'Executando pg_dump...' : 'Disparar Backup Manual do PostgreSQL'}
-            </button>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
+            
+            {/* Action 1: Recalcular Saúde */}
+            <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '10px', border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div>
+                <strong style={{ color: '#38bdf8', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Activity size={16} /> Recalcular Saúde a Quente
+                </strong>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  Invalida o cache transitório e executa uma nova varredura concorrente das 8 sondas atômicas.
+                </p>
+              </div>
+              <button
+                onClick={() => handleAction('recalculate_health', 'Telemetria recalculada com sucesso.')}
+                disabled={actionLoading === 'recalculate_health'}
+                className="btn btn-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <RefreshCw size={15} className={actionLoading === 'recalculate_health' ? 'spin-animation' : ''} />
+                {actionLoading === 'recalculate_health' ? 'Recalculando...' : 'Recalcular Agora'}
+              </button>
+            </div>
 
+            {/* Action 2: Limpar Cache Redis */}
+            <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '10px', border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div>
+                <strong style={{ color: '#10b981', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Radio size={16} /> Limpar Cache Volátil Redis
+                </strong>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  Purga a memória volátil de cache do Redis sem derrubar sessões ativas de usuários autenticados.
+                </p>
+              </div>
+              <button
+                onClick={() => handleAction('purge_cache', 'Cache volátil do Redis purgado com sucesso.')}
+                disabled={actionLoading === 'purge_cache'}
+                className="btn btn-secondary"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <RefreshCw size={15} className={actionLoading === 'purge_cache' ? 'spin-animation' : ''} />
+                {actionLoading === 'purge_cache' ? 'Purgando...' : 'Limpar Cache Redis'}
+              </button>
+            </div>
+
+            {/* Action 3: Warm-up IA */}
+            <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '10px', border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div>
+                <strong style={{ color: '#a855f7', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Brain size={16} /> Aquecer Tensores IA (Warm-up)
+                </strong>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  Carrega na RAM os pesos do Llama 3.2 e Nomic Embed Text com keep-alive de 24h para eliminar cold-start.
+                </p>
+              </div>
+              <button
+                onClick={() => handleAction('warmup_ia', 'Tensores de IA aquecidos na memória RAM.')}
+                disabled={actionLoading === 'warmup_ia'}
+                className="btn btn-secondary"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <Brain size={15} className={actionLoading === 'warmup_ia' ? 'spin-animation' : ''} />
+                {actionLoading === 'warmup_ia' ? 'Aquecendo Tensores...' : 'Disparar Warm-up IA'}
+              </button>
+            </div>
+
+            {/* Action 4: Snapshot de Banco */}
+            <div style={{ background: '#0f172a', padding: '1.25rem', borderRadius: '10px', border: '1px solid #1e293b', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', gap: '0.75rem' }}>
+              <div>
+                <strong style={{ color: '#f59e0b', fontSize: '0.92rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <Database size={16} /> Snapshot Transacional PostgreSQL
+                </strong>
+                <p style={{ fontSize: '0.78rem', color: '#94a3b8', marginTop: '0.35rem' }}>
+                  Verifica a integridade ACID transacional e volumetria do catálogo do banco PostgreSQL 16.
+                </p>
+              </div>
+              <button
+                onClick={() => handleAction('trigger_backup', 'Snapshot transacional verificado com sucesso.')}
+                disabled={actionLoading === 'trigger_backup'}
+                className="btn btn-secondary"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <Download size={15} className={actionLoading === 'trigger_backup' ? 'spin-animation' : ''} />
+                {actionLoading === 'trigger_backup' ? 'Verificando...' : 'Verificar Snapshot'}
+              </button>
+            </div>
+
+          </div>
+
+          {actionFeedback && (
+            <div style={{ 
+              padding: '0.85rem 1.15rem', 
+              background: actionFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+              border: `1px solid ${actionFeedback.type === 'success' ? '#10b981' : '#ef4444'}`, 
+              borderRadius: '8px', 
+              color: actionFeedback.type === 'success' ? '#34d399' : '#f87171', 
+              fontSize: '0.88rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              marginBottom: '1rem'
+            }}>
+              {actionFeedback.type === 'success' ? '✓' : '⚠️'} {actionFeedback.message}
+            </div>
+          )}
+
+          <div style={{ borderTop: '1px solid #1e293b', paddingTop: '1rem', display: 'flex', justifyContent: 'flex-end' }}>
             <button
               onClick={handleClearCache}
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: '0.5rem',
-                padding: '0.75rem 1.25rem',
-                background: '#334155',
-                color: '#fff',
-                border: 'none',
-                borderRadius: '8px',
-                fontWeight: 600,
+                gap: '0.4rem',
+                padding: '0.5rem 1rem',
+                background: '#1e293b',
+                color: '#94a3b8',
+                border: '1px solid #334155',
+                borderRadius: '6px',
+                fontSize: '0.78rem',
                 cursor: 'pointer'
               }}
             >
-              <RefreshCw size={18} /> Limpar Cache Local do Navegador
+              <RefreshCw size={14} /> Limpar Cache Local do Navegador (Client-side)
             </button>
           </div>
-
-          {backupSuccess && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem 1rem', background: 'rgba(16, 185, 129, 0.15)', border: '1px solid #10b981', borderRadius: '8px', color: '#34d399', fontSize: '0.85rem' }}>
-              ✓ Backup snapshot gerado com sucesso e catalogado na rotina automatizada.
-            </div>
-          )}
         </div>
       )}
 
