@@ -374,5 +374,25 @@ class SoftDeleteAndAuditLogTestCase(TestCase):
         self.assertIsNotNone(log)
         self.assertEqual(log.usuario, self.user)
 
+    def test_queryset_bulk_delete_performs_soft_delete(self):
+        """Operação em lote .delete() em QuerySet executa soft delete seguro (Lei 13.787/2018)."""
+        # Executa delete em lote via QuerySet
+        resultado = Prontuario.objects.for_user(self.user).filter(id=self.prontuario.id).delete()
+        self.assertIsInstance(resultado, tuple)
+        self.assertEqual(resultado[0], 1)
+
+        # Registro não é mais visto na consulta comum
+        self.assertEqual(Prontuario.objects.for_user(self.user).count(), 0)
+
+        # Mas permanece no PostgreSQL
+        p_db = Prontuario.objects.for_system(include_deleted=True).get(id=self.prontuario.id)
+        self.assertTrue(p_db.is_deleted)
+        self.assertIsNotNone(p_db.deleted_at)
+
+        # Restauração em lote via QuerySet.restore()
+        Prontuario.objects.for_user(self.user, include_deleted=True).filter(id=self.prontuario.id).restore()
+        self.assertEqual(Prontuario.objects.for_user(self.user).count(), 1)
+
+
 
 

@@ -4,9 +4,31 @@ from django.conf import settings
 from pgvector.django import VectorField, HnswIndex
 
 
+class SoftDeleteQuerySet(models.QuerySet):
+    """
+    QuerySet com exclusão lógica universal (Lei Federal nº 13.787/2018 - Guarda Mínima de 20 Anos).
+    Intercepta operações em lote como .delete() e converte em update(is_deleted=True, deleted_at=timezone.now()),
+    impedindo a purga física via QuerySet.delete() do Django ORM.
+    """
+    def delete(self):
+        from django.utils import timezone
+        agora = timezone.now()
+        total = self.update(is_deleted=True, deleted_at=agora)
+        label = self.model._meta.label if self.model else "sgi.Record"
+        return (total, {label: total})
+
+    def hard_delete(self):
+        """Exclusão física estritamente controlada caso necessária em expurgos judiciais autorizados."""
+        return super().delete()
+
+    def restore(self):
+        """Restaura registros excluídos logicamente em lote."""
+        return self.update(is_deleted=False, deleted_at=None, deleted_by=None)
+
+
 class RLSSecurityManager(models.Manager):
     """
-    Manager de segurança "Fail Closed".
+    Manager de segurança "Fail Closed" com Soft Delete integrado.
     Impede que um desenvolvedor chame acidentalmente .objects.all() e vaze dados inteiros.
     """
     def get_queryset(self):
@@ -15,18 +37,21 @@ class RLSSecurityManager(models.Manager):
             "Você DEVE usar .for_user(user) para realizar consultas seguras."
         )
 
+    def _get_base_queryset(self):
+        return SoftDeleteQuerySet(self.model, using=self._db)
+
     def none(self):
         # none() é estritamente seguro pois nunca retorna registros do banco
-        return super().get_queryset().none()
+        return self._get_base_queryset().none()
 
     def create(self, **kwargs):
         if not kwargs.get('owner'):
             raise PermissionError("Criação negada: Você DEVE associar um 'owner' válido para cumprir a segurança RLS.")
-        return super().get_queryset().create(**kwargs)
+        return self._get_base_queryset().create(**kwargs)
 
     def for_user(self, user, include_deleted=False):
-        # Contornamos nossa própria trava apenas para injetar o filtro seguro
-        qs = super().get_queryset()
+        # Injeta o filtro seguro no SoftDeleteQuerySet
+        qs = self._get_base_queryset()
         if not include_deleted:
             qs = qs.filter(is_deleted=False)
         if user and user.is_superuser:
@@ -38,7 +63,7 @@ class RLSSecurityManager(models.Manager):
         Acesso restrito e explícito de sistema para pipelines internos (Celery Worker / LangGraph / Streaming).
         Mantém a exigência explícita, preservando o Fail-Closed contra chamadas diretas (.all(), .filter(), etc).
         """
-        qs = super().get_queryset()
+        qs = self._get_base_queryset()
         if not include_deleted:
             qs = qs.filter(is_deleted=False)
         return qs
