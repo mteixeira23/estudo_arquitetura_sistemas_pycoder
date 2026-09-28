@@ -51,18 +51,39 @@ def processar_documento_anexo_task(self, documento_id: str):
             f"Conteúdo clínico estruturado para análise do acolhimento."
         )
 
+        # Calcula hash SHA-256 de integridade e não-repúdio se ainda não constar
+        if doc.arquivo and not doc.hash_sha256:
+            try:
+                import hashlib
+                hasher = hashlib.sha256()
+                doc.arquivo.seek(0)
+                for chunk in doc.arquivo.chunks():
+                    hasher.update(chunk)
+                doc.hash_sha256 = hasher.hexdigest()
+            except Exception as exc_hash:
+                logger.warning(f"[Celery IA] Falha ao calcular hash SHA-256 do anexo {doc.id}: {exc_hash}")
+
         doc.texto_extraido = texto_extraido
         doc.status_processamento_ia = DocumentoAnexo.StatusProcessamentoIA.CONCLUIDO
         doc.processado_em = timezone.now()
-        doc.save(update_fields=['texto_extraido', 'status_processamento_ia', 'processado_em', 'updated_at'])
+        doc.save(update_fields=['texto_extraido', 'status_processamento_ia', 'hash_sha256', 'processado_em', 'updated_at'])
 
-        # 3. Se vinculado a um prontuário, cria o chunk inicial para busca semântica
+        # 3. Se vinculado a um prontuário, cria o chunk inicial e já vetoriza imediatamente
         if doc.prontuario:
+            vetor = None
+            try:
+                from .ai.ollama_client import gerar_embedding_texto
+                prefixo = f"search_document: {doc.titulo}\n{texto_extraido[:1000]}"
+                vetor = gerar_embedding_texto(prefixo, is_query=False)
+            except Exception as exc_embed:
+                logger.warning(f"[Celery IA] Falha ao gerar embedding imediato para anexo {doc.id}: {exc_embed}")
+
             ProntuarioChunk.objects.create(
                 owner=doc.owner,
                 prontuario=doc.prontuario,
                 documento_anexo=doc,
-                texto_chunk=texto_extraido[:500]  # Primeiro chunk representativo
+                texto_chunk=texto_extraido[:1000],
+                embedding=vetor
             )
 
         # 4. Emite evento de conclusão em tempo real para o frontend

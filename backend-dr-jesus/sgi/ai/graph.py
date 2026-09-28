@@ -28,17 +28,48 @@ def recuperar_contexto_rag(state: ClinicoState) -> Dict[str, Any]:
     prontuario_id = state.get("prontuario_id")
     pergunta = state.get("pergunta", "")
     
-    logger.info(f"[LangGraph] Nó 1: Recuperando contexto RAG para prontuário {prontuario_id}")
+    logger.info(f"[LangGraph] Nó 1: Recuperando contexto RAG vetorial para prontuário {prontuario_id} com pergunta: '{pergunta}'")
 
     try:
-        # Recupera os chunks associados a este prontuário via canal de sistema seguro
-        chunks_qs = ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)
+        from django.conf import settings
+        is_sqlite = 'sqlite' in settings.DATABASES.get('default', {}).get('ENGINE', '')
         
-        # Se houver chunks cadastrados
+        # 1. Gera embedding da pergunta médica usando nomic-embed-text com prefixo assimétrico 'search_query: '
+        query_vector = gerar_embedding_texto(pergunta, is_query=True) if pergunta else None
+
+        chunks_qs = []
+        if not is_sqlite and query_vector:
+            try:
+                from pgvector.django import CosineDistance
+                # Busca vetorial HNSW via pgvector: ordena pela menor distância de cosseno
+                # Threshold de relevância clínica: distância <= 0.58 (alta similaridade semântica)
+                vetorial_qs = (
+                    ProntuarioChunk.objects.for_system()
+                    .filter(prontuario_id=prontuario_id, embedding__isnull=False)
+                    .annotate(distance=CosineDistance("embedding", query_vector))
+                    .filter(distance__lte=0.58)
+                    .order_by("distance")[:5]
+                )
+                chunks_qs = list(vetorial_qs)
+
+                # Se não houver chunks com distância <= 0.58, busca os 3 mais próximos disponíveis
+                if not chunks_qs:
+                    chunks_qs = list(
+                        ProntuarioChunk.objects.for_system()
+                        .filter(prontuario_id=prontuario_id, embedding__isnull=False)
+                        .annotate(distance=CosineDistance("embedding", query_vector))
+                        .order_by("distance")[:3]
+                    )
+            except Exception as exc_vec:
+                logger.warning(f"[LangGraph] Falha na busca vetorial pgvector ({exc_vec}). Usando fallback.")
+                chunks_qs = list(ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)[:5])
+        else:
+            chunks_qs = list(ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)[:5])
+
         chunks_encontrados = []
         fontes = []
 
-        for c in chunks_qs[:5]:
+        for c in chunks_qs:
             origem = f"Anexo '{c.documento_anexo.titulo}'" if c.documento_anexo else "Anotação Clínica"
             chunks_encontrados.append({
                 "id": str(c.id),
@@ -52,12 +83,13 @@ def recuperar_contexto_rag(state: ClinicoState) -> Dict[str, Any]:
         if not chunks_encontrados:
             try:
                 prontuario = Prontuario.objects.for_system().get(id=prontuario_id)
-                chunks_encontrados.append({
-                    "id": str(prontuario.id),
-                    "texto": prontuario.observacoes_clinicas,
-                    "origem": "Observação de Entrada do Prontuário"
-                })
-                fontes.append("Prontuário Principal")
+                if prontuario.observacoes_clinicas:
+                    chunks_encontrados.append({
+                        "id": str(prontuario.id),
+                        "texto": prontuario.observacoes_clinicas,
+                        "origem": "Observação de Entrada do Prontuário"
+                    })
+                    fontes.append("Prontuário Principal")
             except Prontuario.DoesNotExist:
                 pass
 

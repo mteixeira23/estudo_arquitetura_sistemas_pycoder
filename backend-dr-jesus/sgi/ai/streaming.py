@@ -4,7 +4,7 @@ from typing import Generator, Optional
 from django.db import close_old_connections
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from .ollama_client import get_llm
+from .ollama_client import get_llm, gerar_embedding_texto
 from ..models import Prontuario, ProntuarioChunk
 
 logger = logging.getLogger(__name__)
@@ -24,21 +24,53 @@ def gerar_stream_prontuario(
     Gerador de streaming em tempo real token-a-token para perguntas sobre o prontuário.
     Blindagens corporativas da Sabatina 4.3:
     - Priming inicial imediato para zerar TTFB na Cloudflare e Traefik.
+    - Busca vetorial pura por distância de cosseno (HNSW pgvector).
     - Fechamento preventivo de conexões de banco de dados antes da inferência longa.
     - Captura graciosa de GeneratorExit e BrokenPipeError para higiene de logs.
     - Liberação downstream de recursos.
     """
-    logger.info(f"[Streaming IA] Iniciando streaming RAG para prontuário {prontuario_id}")
+    logger.info(f"[Streaming IA] Iniciando streaming RAG vetorial para prontuário {prontuario_id}")
 
     # 1. Priming imediato de rede (reset do cronômetro de 100s da Cloudflare e Traefik)
     # Comentário SSE oficial (: ping) que força frame TCP/HTTP real sem afetar renderização do browser
     yield ": ping\n\n"
 
-    # 2. Recuperação de contexto do banco (RAG)
+    # 2. Recuperação de contexto do banco (RAG via CosineDistance)
     contexto_chunks = []
     try:
-        chunks_qs = ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)
-        for c in chunks_qs[:5]:
+        from django.conf import settings
+        is_sqlite = 'sqlite' in settings.DATABASES.get('default', {}).get('ENGINE', '')
+
+        # Gera embedding da pergunta médica usando nomic-embed-text
+        query_vector = gerar_embedding_texto(pergunta, is_query=True) if pergunta else None
+
+        chunks_qs = []
+        if not is_sqlite and query_vector:
+            try:
+                from pgvector.django import CosineDistance
+                vetorial_qs = (
+                    ProntuarioChunk.objects.for_system()
+                    .filter(prontuario_id=prontuario_id, embedding__isnull=False)
+                    .annotate(distance=CosineDistance("embedding", query_vector))
+                    .filter(distance__lte=0.58)
+                    .order_by("distance")[:5]
+                )
+                chunks_qs = list(vetorial_qs)
+
+                if not chunks_qs:
+                    chunks_qs = list(
+                        ProntuarioChunk.objects.for_system()
+                        .filter(prontuario_id=prontuario_id, embedding__isnull=False)
+                        .annotate(distance=CosineDistance("embedding", query_vector))
+                        .order_by("distance")[:3]
+                    )
+            except Exception as exc_vec:
+                logger.warning(f"[Streaming IA] Busca vetorial pgvector falhou ({exc_vec}). Usando fallback.")
+                chunks_qs = list(ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)[:5])
+        else:
+            chunks_qs = list(ProntuarioChunk.objects.for_system().filter(prontuario_id=prontuario_id)[:5])
+
+        for c in chunks_qs:
             origem = f"Anexo '{c.documento_anexo.titulo}'" if c.documento_anexo else "Anotação Clínica"
             contexto_chunks.append(f"[{origem}]: {c.texto_chunk}")
 
