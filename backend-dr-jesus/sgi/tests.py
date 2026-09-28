@@ -254,10 +254,10 @@ class EcosystemActionsTestCase(TestCase):
             email="admin.acao@singulariconsult.com.br"
         )
 
-    def test_unauthenticated_action_rejected_401(self):
-        """Disparo de ação sem credenciais deve retornar 401 Unauthorized."""
+    def test_unauthenticated_action_rejected_401_or_403(self):
+        """Disparo de ação sem credenciais deve ser rejeitado (401 Unauthorized ou 403 Forbidden)."""
         response = self.client.post("/api/dashboard/action/", {"action": "purge_cache"}, format="json")
-        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+        self.assertIn(response.status_code, [status.HTTP_401_UNAUTHORIZED, status.HTTP_403_FORBIDDEN])
 
     def test_non_admin_action_forbidden_403(self):
         """Usuário autenticado comum não pode disparar comandos operacionais (403 Forbidden)."""

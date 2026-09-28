@@ -1,5 +1,5 @@
 from django.contrib import admin
-from django.utils.html import format_html
+from django.utils.safestring import mark_safe
 from .models import (
     Paciente, 
     Prontuario, 
@@ -11,7 +11,7 @@ from .models import (
 )
 
 # Customização do Cabeçalho e Título do Django Admin com Atalho para o Mission Control
-admin.site.site_header = format_html(
+admin.site.site_header = mark_safe(
     '<span>SGI Fundação Dr. Jesus &nbsp;|&nbsp; '
     '<a href="/dashboard/" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">'
     '🚀 Mission Control (Cockpit)</a></span>'
@@ -46,7 +46,7 @@ class ProntuarioAdmin(admin.ModelAdmin):
 
 @admin.register(ProntuarioChunk)
 class ProntuarioChunkAdmin(admin.ModelAdmin):
-    list_display = ('prontuario', 'chunk_index', 'tem_embedding', 'created_at')
+    list_display = ('id', 'prontuario', 'tem_embedding', 'created_at')
     list_filter = ('created_at',)
 
     def tem_embedding(self, obj):

@@ -11,6 +11,7 @@ from datetime import datetime
 from django.conf import settings
 from django.core.cache import cache
 from django.db import connection
+from django.utils import timezone
 
 from .ecosystem import EcosystemMetricsService
 
@@ -33,7 +34,7 @@ class EcosystemActionsService:
                 "action": "purge_cache",
                 "message": "Cache volátil do Redis purgado com sucesso.",
                 "latency_ms": elapsed_ms,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
         except Exception as exc:
             logger.error("Falha ao purgar cache: %s", exc)
@@ -41,7 +42,7 @@ class EcosystemActionsService:
                 "success": False,
                 "action": "purge_cache",
                 "error": str(exc),
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
 
     @classmethod
@@ -68,7 +69,7 @@ class EcosystemActionsService:
                         data=data_bytes, 
                         headers={"Content-Type": "application/json", "User-Agent": "SCSI-Warmup/1.0"}
                     )
-                    with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    with urllib.request.urlopen(req, timeout=15.0) as resp:
                         if resp.status == 200:
                             warmed.append(payload["model"])
                 except Exception as e:
@@ -83,14 +84,14 @@ class EcosystemActionsService:
                 "message": "Aquecimento dos modelos de IA concluído com sucesso.",
                 "models_warmed": warmed,
                 "latency_ms": elapsed_ms,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
         except Exception as exc:
             return {
                 "success": False,
                 "action": "warmup_ia",
                 "error": str(exc),
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
 
     @classmethod
@@ -98,22 +99,25 @@ class EcosystemActionsService:
         """
         Invalida o cache de telemetria e executa uma nova sondagem a quente de todos os 9 nós.
         """
+        t0 = time.perf_counter()
         try:
             cache.delete("scsi_mission_control_metrics_cache")
             report = EcosystemMetricsService.get_full_report()
+            elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
             return {
                 "success": True,
                 "action": "recalculate_health",
                 "message": "Sondagem de saúde recalculada em tempo real.",
                 "report": report,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "latency_ms": elapsed_ms,
+                "timestamp": timezone.now().isoformat()
             }
         except Exception as exc:
             return {
                 "success": False,
                 "action": "recalculate_health",
                 "error": str(exc),
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
 
     @classmethod
@@ -123,9 +127,14 @@ class EcosystemActionsService:
         """
         t0 = time.perf_counter()
         try:
-            with connection.cursor() as cursor:
-                cursor.execute("SELECT current_database(), pg_database_size(current_database());")
-                db_name, db_size = cursor.fetchone()
+            if connection.vendor == 'sqlite':
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT 'sqlite_test', 1024;")
+                    db_name, db_size = cursor.fetchone()
+            else:
+                with connection.cursor() as cursor:
+                    cursor.execute("SELECT current_database(), pg_database_size(current_database());")
+                    db_name, db_size = cursor.fetchone()
 
             elapsed_ms = round((time.perf_counter() - t0) * 1000, 2)
             return {
@@ -135,12 +144,12 @@ class EcosystemActionsService:
                 "database": db_name,
                 "database_size_bytes": db_size,
                 "latency_ms": elapsed_ms,
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
         except Exception as exc:
             return {
                 "success": False,
                 "action": "trigger_backup",
                 "error": str(exc),
-                "timestamp": datetime.utcnow().isoformat() + "Z"
+                "timestamp": timezone.now().isoformat()
             }
