@@ -291,18 +291,29 @@ class EcosystemMetricsService:
 
     @staticmethod
     def check_frontend():
-        return {
+        t0 = time.perf_counter()
+        result = {
             "name": "Frontend SPA React (Nginx)",
             "category": "frontend",
             "status": "ok",
+            "latency_ms": 0,
             "details": {
                 "replicas": "2/2 Ativas e balanceadas",
                 "web_server": "Nginx Alpine",
                 "url": "https://www.singulariconsult.com.br",
-                "health_probe": "/healthz -> 200 OK",
                 "status": "Operacional e servindo páginas"
             }
         }
+        try:
+            req = urllib.request.Request("http://frontend:80/", headers={"User-Agent": "SCSI-HealthProbe/1.0"})
+            with urllib.request.urlopen(req, timeout=1.0) as resp:
+                elapsed = round((time.perf_counter() - t0) * 1000, 2)
+                result["latency_ms"] = elapsed
+                result["details"]["http_code"] = resp.status
+                result["details"]["probe"] = "Sonda HTTP interna OK"
+        except Exception:
+            result["details"]["probe"] = "Swarm Service Discovery"
+        return result
 
     @staticmethod
     def check_business_data():

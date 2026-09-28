@@ -191,3 +191,53 @@ class EventsAndRealtimeTestCase(TestCase):
         self.assertEqual(response.data["status"], "healthy")
         self.assertEqual(response.data["checks"]["database"], "ok")
 
+
+class EcosystemMetricsTestCase(TestCase):
+    """
+    Testes de Segurança e Integridade do Dashboard de Observabilidade (Fase 1).
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.normal_user = User.objects.create_user(username="operador_comum", password="password123")
+        self.admin_user = User.objects.create_superuser(
+            username="super_admin_scsi",
+            password="password123",
+            email="admin@singulariconsult.com.br"
+        )
+
+    def test_unauthenticated_metrics_rejected_401(self):
+        """Requisição sem credenciais deve ser rejeitada com 401 Unauthorized."""
+        response = self.client.get("/api/dashboard/metrics/")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+        response_status = self.client.get("/api/ecosystem/status/")
+        self.assertEqual(response_status.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_non_admin_metrics_forbidden_403(self):
+        """Usuário autenticado sem perfil is_staff/superuser é bloqueado com 403 Forbidden."""
+        self.client.force_authenticate(user=self.normal_user)
+        response = self.client.get("/api/dashboard/metrics/")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_metrics_allowed_200_and_schema(self):
+        """Superadministrador recebe o relatório estruturado completo do ecossistema."""
+        self.client.force_authenticate(user=self.admin_user)
+        response = self.client.get("/api/dashboard/metrics/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("overall_status", response.data)
+        self.assertIn("summary", response.data)
+        self.assertIn("components", response.data)
+        self.assertIn("business", response.data)
+        self.assertGreaterEqual(len(response.data["components"]), 8)
+
+    def test_service_check_business_data_returns_dict(self):
+        """A sonda de negócio retorna todas as métricas agregadas sob RLS for_system()."""
+        from .ecosystem import EcosystemMetricsService
+        biz = EcosystemMetricsService.check_business_data()
+        self.assertIn("users_count", biz)
+        self.assertIn("pacientes_count", biz)
+        self.assertIn("prontuarios_count", biz)
+        self.assertIn("rag_chunks_count", biz)
+        self.assertIn("rag_chunks_embedded_count", biz)
+
+
