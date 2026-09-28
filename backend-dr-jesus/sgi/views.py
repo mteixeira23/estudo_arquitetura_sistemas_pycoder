@@ -252,4 +252,21 @@ class HealthCheckView(APIView):
         return Response(status_data, status=status_code)
 
 
+from sgi.ecosystem import EcosystemMetricsService
+from rest_framework.permissions import IsAdminUser
+
+
+class EcosystemMetricsView(APIView):
+    """
+    Endpoint do Mission Control / Central de Observabilidade SCSI (Fase 1).
+    Retorna métricas consolidadas em tempo real de todos os 9 componentes da arquitetura.
+    """
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        report = EcosystemMetricsService.get_full_report()
+        return Response(report, status=200)
+
+
+
 

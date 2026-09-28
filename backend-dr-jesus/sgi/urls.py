@@ -10,7 +10,8 @@ from .views import (
     PerguntarProntuarioIAView,
     ProntuarioStreamIAView,
     ChatGeralStreamIAView,
-    HealthCheckView
+    HealthCheckView,
+    EcosystemMetricsView
 )
 
 router = DefaultRouter()
@@ -24,6 +25,10 @@ router.register(r'storage/documentos', DocumentoAnexoViewSet, basename='document
 urlpatterns = [
     # Probe de Saúde do Cluster Docker Swarm / Traefik
     path('health/', HealthCheckView.as_view(), name='health_check'),
+
+    # Mission Control / Dashboard de Observabilidade Unificada (Fase 1)
+    path('ecosystem/status/', EcosystemMetricsView.as_view(), name='ecosystem_status'),
+    path('dashboard/metrics/', EcosystemMetricsView.as_view(), name='dashboard_metrics'),
 
     # Rotas dos ViewSets CRUD
     path('', include(router.urls)),
