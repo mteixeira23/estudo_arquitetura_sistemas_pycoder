@@ -480,6 +480,7 @@ class HermesSREToolsTestCase(TestCase):
     """
     def test_all_sre_guardians_execute_and_return_schema(self):
         from sgi.ai.sre_tools import (
+            inspect_cloudflare_guardian,
             inspect_database_guardian,
             inspect_rabbitmq_guardian,
             inspect_redis_guardian,
@@ -491,6 +492,12 @@ class HermesSREToolsTestCase(TestCase):
             inspect_security_guardian,
             inspect_full_cluster_sre
         )
+
+        # 0. Cloudflare Guardian
+        cf_rep = inspect_cloudflare_guardian()
+        self.assertEqual(cf_rep["guardian"], "cloudflare_edge_expert")
+        self.assertIn("status", cf_rep)
+        self.assertIn("latency_ms", cf_rep)
 
         # 1. Database Guardian
         db_rep = inspect_database_guardian()
@@ -541,7 +548,7 @@ class HermesSREToolsTestCase(TestCase):
         # 10. Orquestrador Hermes SRE Full Cluster
         full_rep = inspect_full_cluster_sre()
         self.assertEqual(full_rep["orquestrador"], "Hermes Agent (Nous Research)")
-        self.assertEqual(full_rep["guardians_total"], 9)
+        self.assertEqual(full_rep["guardians_total"], 10)
         self.assertIn("health_score", full_rep)
         self.assertIn("summary", full_rep)
         self.assertGreaterEqual(full_rep["health_score"], 50)
@@ -608,7 +615,7 @@ class HermesSREPeriodicTaskTestCase(TestCase):
         self.assertIn("score_saude", resultado)
         self.assertIn("status_geral", resultado)
         self.assertIn("alerta_disparado", resultado)
-        self.assertEqual(resultado["guardioes_auditados"], 9)
+        self.assertEqual(resultado["guardioes_auditados"], 10)
 
     def test_hermes_sre_task_is_registered_in_celery_beat_schedule(self):
         """Garante que a patrulha periódica de 6h do Hermes SRE está registrada no CELERY_BEAT_SCHEDULE."""

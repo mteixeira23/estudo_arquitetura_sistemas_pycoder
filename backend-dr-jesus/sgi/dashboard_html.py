@@ -1672,7 +1672,7 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       showToast(`Hermes Agent acionado: "${comando}"...`, 'success');
 
       try {
-        const res = await fetch('/api/ia/hermes/sre/', {
+        const fetchOptions = {
           method: 'POST',
           credentials: 'same-origin',
           headers: {
@@ -1680,7 +1680,11 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
             'X-CSRFToken': getCsrfToken()
           },
           body: JSON.stringify({ comando, modo })
-        });
+        };
+        if (window.AbortSignal && AbortSignal.timeout) {
+          fetchOptions.signal = AbortSignal.timeout(35000);
+        }
+        const res = await fetch('/api/ia/hermes/sre/', fetchOptions);
 
         if (!res.ok) {
           throw new Error(`HTTP ${res.status}`);

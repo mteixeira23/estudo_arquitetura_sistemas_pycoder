@@ -16,6 +16,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from .ollama_client import get_llm
 from .sre_tools import (
+    inspect_cloudflare_guardian,
     inspect_database_guardian,
     inspect_rabbitmq_guardian,
     inspect_redis_guardian,
@@ -60,6 +61,8 @@ def planejar_inspecoes_node(state: HermesSREState) -> Dict[str, Any]:
 
     # Mapeamento semântico de palavras-chave para guardiões
     selected = []
+    if "borda" in cmd or "cloudflare" in cmd or "waf" in cmd or "cdn" in cmd:
+        selected.append("cloudflare")
     if "banco" in cmd or "postgres" in cmd or "sql" in cmd or "hnsw" in cmd:
         selected.append("database")
     if "fila" in cmd or "rabbitmq" in cmd or "amqp" in cmd or "dlq" in cmd:
@@ -82,7 +85,7 @@ def planejar_inspecoes_node(state: HermesSREState) -> Dict[str, Any]:
     # Se nenhum for específico ou se modo for 'full'/'geral', ativa o cluster completo
     if modo == "full" or not selected or "geral" in cmd or "completo" in cmd or "cluster" in cmd:
         selected = [
-            "database", "rabbitmq", "redis", "celery",
+            "cloudflare", "database", "rabbitmq", "redis", "celery",
             "traefik", "frontend", "django", "ollama", "security"
         ]
 
@@ -98,6 +101,7 @@ def executar_guardioes_node(state: HermesSREState) -> Dict[str, Any]:
     collected: Dict[str, Any] = {}
 
     tools_map = {
+        "cloudflare": inspect_cloudflare_guardian,
         "database": inspect_database_guardian,
         "rabbitmq": inspect_rabbitmq_guardian,
         "redis": inspect_redis_guardian,
