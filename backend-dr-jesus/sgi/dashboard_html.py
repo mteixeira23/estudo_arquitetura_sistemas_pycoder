@@ -1513,8 +1513,10 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         const card = document.createElement("div");
         card.className = "component-card";
 
-        const statusClass = comp.status === "ok" ? "ok" : (comp.status === "warning" ? "warning" : "error");
-        const statusLabel = comp.status === "ok" ? "Operacional" : (comp.status === "warning" ? "Atenção" : "Falha");
+        const isCompOk = comp.status === "ok" || comp.status === "healthy" || comp.status === "operacional";
+        const isCompWarn = comp.status === "warning" || comp.status === "atencao" || comp.status === "atenção";
+        const statusClass = isCompOk ? "ok" : (isCompWarn ? "warning" : "error");
+        const statusLabel = isCompOk ? "Operacional" : (isCompWarn ? "Atenção" : "Falha");
 
         let detailsHtml = '';
         const details = comp.details || {};
@@ -1796,14 +1798,18 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
           
           let actionBtnHtml = '';
           const rLower = r.toLowerCase();
-          if (rLower.includes('cache') || rLower.includes('redis') || rLower.includes('evic')) {
-            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #ec4899; color: #f472b6;" onclick="executeAction('purge_cache', this)"><span>🧹</span> Limpar Cache Redis (1-Clique)</button></div>`;
-          } else if (rLower.includes('tensor') || rLower.includes('ollama') || rLower.includes('ia') || rLower.includes('warm')) {
-            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #a855f7; color: #c084fc;" onclick="executeAction('warmup_ia', this)"><span>🧠</span> Aquecer Tensores IA (1-Clique)</button></div>`;
-          } else if (rLower.includes('backup') || rLower.includes('snapshot') || rLower.includes('banco') || rLower.includes('postgres') || rLower.includes('dados')) {
-            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #38bdf8; color: #38bdf8;" onclick="executeAction('trigger_backup', this)"><span>📦</span> Snapshot Transacional (1-Clique)</button></div>`;
-          } else if (rLower.includes('saúde') || rLower.includes('diagnóstico') || rLower.includes('recalcular')) {
-            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #10b981; color: #34d399;" onclick="executeAction('recalculate_health', this)"><span>🔄</span> Recalcular Saúde (1-Clique)</button></div>`;
+          const isOperationalNotice = rLower.includes('tolerâncias ideais') || rLower.includes('operam dentro das tolerâncias');
+          
+          if (!isOperationalNotice) {
+            if (rLower.includes('cache') || rLower.includes('redis') || rLower.includes('evic')) {
+              actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #ec4899; color: #f472b6;" onclick="executeAction('purge_cache', this)"><span>🧹</span> Limpar Cache Redis (1-Clique)</button></div>`;
+            } else if (rLower.includes('tensor') || rLower.includes('ollama') || /\b(ia|ai|llm)\b/i.test(r) || rLower.includes('warm')) {
+              actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #a855f7; color: #c084fc;" onclick="executeAction('warmup_ia', this)"><span>🧠</span> Aquecer Tensores IA (1-Clique)</button></div>`;
+            } else if (rLower.includes('backup') || rLower.includes('snapshot') || rLower.includes('banco') || rLower.includes('postgres') || rLower.includes('dados')) {
+              actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #38bdf8; color: #38bdf8;" onclick="executeAction('trigger_backup', this)"><span>📦</span> Snapshot Transacional (1-Clique)</button></div>`;
+            } else if (rLower.includes('saúde') || rLower.includes('diagnóstico') || rLower.includes('recalcular')) {
+              actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #10b981; color: #34d399;" onclick="executeAction('recalculate_health', this)"><span>🔄</span> Recalcular Saúde (1-Clique)</button></div>`;
+            }
           }
 
           recCard.innerHTML = `
@@ -1824,15 +1830,18 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         const badge = document.getElementById(`badge-${key}`);
         const meta = document.getElementById(`meta-${key}`);
         if (badge) {
-          const st = (tdata.status || 'ok').toLowerCase();
-          const badgeClass = st === 'ok' ? 'ok' : (st === 'warning' ? 'warning' : 'error');
-          const badgeText = st === 'ok' ? 'Operacional' : (st === 'warning' ? 'Atenção' : 'Crítico');
+          const st = (tdata.status || 'healthy').toLowerCase();
+          const isOk = st === 'ok' || st === 'healthy' || st === 'operacional' || st === 'healthy_idle';
+          const isWarn = st === 'warning' || st === 'atencao' || st === 'atenção';
+          const badgeClass = isOk ? 'ok' : (isWarn ? 'warning' : 'error');
+          const badgeText = isOk ? 'Operacional' : (isWarn ? 'Atenção' : 'Crítico');
           badge.className = `badge ${badgeClass}`;
           badge.innerText = badgeText;
         }
         if (meta) {
-          const lat = tdata.latency_ms ? `${tdata.latency_ms}ms` : '';
-          const detail = tdata.metricas ? JSON.stringify(tdata.metricas).substring(0, 45) + '...' : (tdata.versao || tdata.mensagem || '');
+          const lat = tdata.latency_ms !== undefined ? `${tdata.latency_ms}ms` : '';
+          const metricsObj = tdata.metrics || tdata.metricas;
+          const detail = metricsObj ? (typeof metricsObj === 'string' ? metricsObj : JSON.stringify(metricsObj).substring(0, 48) + '...') : (tdata.diagnosis || tdata.versao || tdata.mensagem || '');
           meta.innerHTML = `<span>${detail}</span><br><span style="color: #38bdf8;">${lat}</span>`;
         }
       }
