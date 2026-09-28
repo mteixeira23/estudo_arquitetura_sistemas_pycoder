@@ -68,3 +68,73 @@ def recalcular_metricas_ecossistema_task():
     except Exception as e:
         logger.warning(f"[Celery Beat] Falha na telemetria periódica: {e}")
         return {"status": "error", "error": str(e)}
+
+
+@shared_task(name="sgi.tasks.verificar_integridade_hashes_anexos_task")
+def verificar_integridade_hashes_anexos_task():
+    """
+    Auditoria periódica de custódia e integridade criptográfica SHA-256 dos anexos hospitalares (Item 6).
+    Detecta corrupção silenciosa de disco (bit-rot) ou adulteração não autorizada.
+    Executada semanalmente via Celery Beat.
+    """
+    import hashlib
+    import os
+    from sgi.models import DocumentoAnexo, AuditLog
+
+    logger.info("[Celery Beat] Iniciando auditoria de integridade criptográfica SHA-256 dos anexos...")
+    anexos = DocumentoAnexo.objects.for_system().all()
+    total = anexos.count()
+    integros = 0
+    divergentes = 0
+    ausentes = 0
+
+    for anexo in anexos:
+        if not anexo.arquivo:
+            continue
+
+        try:
+            caminho_arquivo = anexo.arquivo.path
+            if not os.path.exists(caminho_arquivo):
+                logger.warning(f"[Custódia Alerta] Anexo {anexo.id} ausente no disco: {caminho_arquivo}")
+                ausentes += 1
+                continue
+
+            hasher = hashlib.sha256()
+            with open(caminho_arquivo, "rb") as f:
+                for chunk in iter(lambda: f.read(65536), b""):
+                    hasher.update(chunk)
+            hash_calculado = hasher.hexdigest()
+
+            if anexo.hash_sha256 and hash_calculado != anexo.hash_sha256:
+                divergentes += 1
+                logger.critical(
+                    f"[ALERTA DE VIOLAÇÃO FORENSE] Anexo {anexo.id} com hash divergente! "
+                    f"Esperado: {anexo.hash_sha256} | Calculado: {hash_calculado}"
+                )
+                AuditLog.registrar(
+                    usuario=None,
+                    acao=AuditLog.AcaoChoices.EXPORT,
+                    recurso="DocumentoAnexo",
+                    recurso_id=str(anexo.id),
+                    detalhes={
+                        "alerta": "TAMPER_DETECTED_HASH_MISMATCH",
+                        "hash_esperado": anexo.hash_sha256,
+                        "hash_calculado": hash_calculado
+                    }
+                )
+            else:
+                integros += 1
+        except Exception as e:
+            logger.warning(f"[Custódia] Erro ao auditar anexo {anexo.id}: {e}")
+
+    logger.info(
+        f"[Celery Beat] Auditoria concluída: {total} total | "
+        f"{integros} íntegros | {divergentes} divergentes | {ausentes} ausentes."
+    )
+    return {
+        "status": "ok" if divergentes == 0 else "alert",
+        "total_auditados": total,
+        "integros": integros,
+        "divergentes": divergentes,
+        "ausentes": ausentes
+    }

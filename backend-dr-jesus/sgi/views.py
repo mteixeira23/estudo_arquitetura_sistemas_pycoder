@@ -12,7 +12,8 @@ from .models import (
     EstoqueItem, 
     MovimentacaoEstoque, 
     Doacao, 
-    DocumentoAnexo
+    DocumentoAnexo,
+    AuditLog
 )
 from .serializers import (
     PacienteSerializer, 
@@ -365,6 +366,119 @@ class EcosystemActionView(APIView):
 
         status_code = 200 if result.get("success") else 500
         return Response(result, status=status_code)
+
+
+# --- SCSI: Recuperação Segura de Senhas & E-mail Transacional (Item 9) ---
+from django.contrib.auth.tokens import default_token_generator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.contrib.auth.models import User
+from django.conf import settings
+
+
+class PasswordResetRequestView(APIView):
+    """
+    Solicitação de redefinição segura de senha com proteção contra enumeração (OWASP).
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email", "").strip()
+        if email:
+            user = User.objects.filter(email__iexact=email).first()
+            if user:
+                token = default_token_generator.make_token(user)
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                reset_link = f"https://singulariconsult.com.br/reset-password?uid={uidb64}&token={token}"
+                
+                assunto = "SGI Fundação Dr. Jesus - Recuperação de Senha"
+                mensagem = (
+                    f"Olá, {user.first_name or user.username}!\n\n"
+                    f"Uma solicitação de redefinição de senha foi realizada para sua conta no SGI Dr. Jesus.\n"
+                    f"Para criar uma nova senha de acesso, clique no link seguro abaixo:\n\n"
+                    f"{reset_link}\n\n"
+                    f"Se você não solicitou esta redefinição, desconsidere esta mensagem.\n"
+                    f"Este link é válido por tempo limitado.\n\n"
+                    f"Atenciosamente,\nEquipe de TI & Governança - Fundação Dr. Jesus"
+                )
+                try:
+                    send_mail(
+                        assunto,
+                        mensagem,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=True
+                    )
+                except Exception as e:
+                    import logging
+                    logging.getLogger(__name__).warning(f"[SMTP Error] Falha ao enviar e-mail de reset: {e}")
+
+                AuditLog.registrar(
+                    usuario=user,
+                    acao=AuditLog.AcaoChoices.EXPORT,
+                    recurso="PasswordReset",
+                    detalhes={"evento": "solicitacao_reset_senha"},
+                    request=request
+                )
+
+        return Response(
+            {"message": "Se o e-mail informado estiver cadastrado em nosso sistema, as instruções para redefinição de senha foram enviadas."},
+            status=status.HTTP_200_OK
+        )
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    Confirmação criptográfica de redefinição de senha com validação de token e registro forense.
+    """
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uidb64 = request.data.get("uid")
+        token = request.data.get("token")
+        new_password = request.data.get("new_password")
+
+        if not uidb64 or not token or not new_password:
+            return Response(
+                {"error": "Parâmetros 'uid', 'token' e 'new_password' são obrigatórios."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if len(new_password) < 8:
+            return Response(
+                {"error": "A nova senha deve ter no mínimo 8 caracteres."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.filter(pk=uid).first()
+        except Exception:
+            user = None
+
+        if not user or not default_token_generator.check_token(user, token):
+            return Response(
+                {"error": "O link de redefinição de senha é inválido ou já expirou."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        user.set_password(new_password)
+        user.save()
+
+        AuditLog.registrar(
+            usuario=user,
+            acao=AuditLog.AcaoChoices.UPDATE,
+            recurso="UserPassword",
+            detalhes={"evento": "senha_redefinida_com_sucesso"},
+            request=request
+        )
+
+        return Response(
+            {"message": "Senha redefinida com sucesso. Você já pode efetuar login com suas novas credenciais."},
+            status=status.HTTP_200_OK
+        )
+
 
 
 

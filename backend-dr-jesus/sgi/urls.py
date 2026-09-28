@@ -12,7 +12,9 @@ from .views import (
     ChatGeralStreamIAView,
     HealthCheckView,
     EcosystemMetricsView,
-    EcosystemActionView
+    EcosystemActionView,
+    PasswordResetRequestView,
+    PasswordResetConfirmView
 )
 
 router = DefaultRouter()
@@ -31,6 +33,10 @@ urlpatterns = [
     path('ecosystem/status/', EcosystemMetricsView.as_view(), name='ecosystem_status'),
     path('dashboard/metrics/', EcosystemMetricsView.as_view(), name='dashboard_metrics'),
     path('dashboard/action/', EcosystemActionView.as_view(), name='dashboard_action'),
+
+    # Rotas de Autenticação Segura e Recuperação de Senhas (Item 9)
+    path('auth/password-reset/', PasswordResetRequestView.as_view(), name='password_reset_request'),
+    path('auth/password-reset/confirm/', PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
 
     # Rotas dos ViewSets CRUD
     path('', include(router.urls)),

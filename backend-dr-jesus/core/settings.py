@@ -132,6 +132,7 @@ if 'test' in sys.argv or os.environ.get('DJANGO_USE_SQLITE_TEST', 'false').lower
             return None
     MIGRATION_MODULES = DisableMigrations()
 else:
+    IS_CELERY_PROCESS = any('celery' in arg.lower() for arg in sys.argv)
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
@@ -140,7 +141,9 @@ else:
             'PASSWORD': get_secret('scsi_postgres_password', os.environ.get('POSTGRES_PASSWORD', 'drjesus_senha_forte_123')),
             'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
             'PORT': os.environ.get('POSTGRES_PORT', '5432'),
-            'CONN_MAX_AGE': 600,  # Reutilização persistente de conexões (mitiga overhead TCP/DNS)
+            # Item 7: Segregação de Pool DB (Celery=0 evita conexões zumbis; Web=300s com health checks ativos)
+            'CONN_MAX_AGE': 0 if IS_CELERY_PROCESS else 300,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
 
@@ -191,14 +194,22 @@ DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024  # 10MB teto total do payload
 FILE_UPLOAD_MAX_MEMORY_SIZE = 2621440           # 2.5MB no heap RAM (DevOps: evita OOM em uploads simultâneos)
 
 
-# Email
+# Email (Django 6.1 MAILERS com SMTP Hostinger e Console Fallback)
 # https://docs.djangoproject.com/en/6.1/topics/email/#topic-email-configuration
 
 MAILERS = {
     'default': {
-        'BACKEND': 'django.core.mail.backends.console.EmailBackend',
+        'BACKEND': os.environ.get('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend'),
+        'OPTIONS': {
+            'host': os.environ.get('EMAIL_HOST', 'smtp.hostinger.com'),
+            'port': int(os.environ.get('EMAIL_PORT', 587)),
+            'username': get_secret('scsi_email_user', os.environ.get('EMAIL_HOST_USER', 'noreply@singulariconsult.com.br')),
+            'password': get_secret('scsi_email_password', os.environ.get('EMAIL_HOST_PASSWORD', '')),
+            'use_tls': os.environ.get('EMAIL_USE_TLS', 'true').lower() == 'true',
+        } if os.environ.get('EMAIL_BACKEND', '').endswith('smtp.EmailBackend') else {},
     },
 }
+DEFAULT_FROM_EMAIL = f"SGI Fundação Dr. Jesus <{get_secret('scsi_email_user', os.environ.get('EMAIL_HOST_USER', 'noreply@singulariconsult.com.br'))}>"
 
 # --- SCSI: Autenticação Soberana (Substituindo o Supabase Auth) ---
 
@@ -293,10 +304,25 @@ CELERY_WORKER_PREFETCH_MULTIPLIER = 1      # Impede que um worker monopolize job
 CELERY_TASK_ACKS_LATE = True               # Confirma mensagem apenas após execução bem-sucedida
 CELERY_TASK_REJECT_ON_WORKER_LOST = True   # Re-enfileira automaticamente se o worker sofrer crash/OOM
 
-# Isolamento estrito de Filas (ADR Celery Worker):
-# - default: tarefas operacionais rápidas
-# - ia_tasks: tarefas pesadas cognitivas (LangGraph, OCR, Ollama embeddings)
+# Isolamento estrito de Filas e Topologia DLQ (Dead Letter Queue - Item 8)
+from kombu import Queue, Exchange
+
+default_exchange = Exchange('default', type='direct')
+dlx_exchange = Exchange('dlx', type='direct')
+
 CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_QUEUES = (
+    Queue('default', default_exchange, routing_key='default', queue_arguments={
+        'x-dead-letter-exchange': 'dlx',
+        'x-dead-letter-routing-key': 'dead_letter',
+    }),
+    Queue('ia_tasks', default_exchange, routing_key='ia_tasks', queue_arguments={
+        'x-dead-letter-exchange': 'dlx',
+        'x-dead-letter-routing-key': 'dead_letter',
+    }),
+    Queue('dead_letter_queue', dlx_exchange, routing_key='dead_letter'),
+)
+
 CELERY_TASK_ROUTES = {
     'sgi.tasks_ia.*': {'queue': 'ia_tasks'},
     'sgi.tasks.*': {'queue': 'default'},
@@ -322,6 +348,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'sgi.tasks.recalcular_metricas_ecossistema_task',
         'schedule': 300.0,  # A cada 5 minutos (300s)
     },
+    'verificar-integridade-hashes-anexos-semanal': {
+        'task': 'sgi.tasks.verificar_integridade_hashes_anexos_task',
+        'schedule': crontab(day_of_week=0, hour=2, minute=0),  # Todo domingo às 02:00 UTC
+    },
 }
 
 # --- SCSI: Otimizações de Testes Unitários e End-to-End ---
@@ -330,6 +360,7 @@ if 'test' in sys.argv:
     CELERY_TASK_EAGER_PROPAGATES = True
     CELERY_BROKER_URL = 'memory://'
     CELERY_RESULT_BACKEND = 'cache+memory://'
+
 
 
 

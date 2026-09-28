@@ -394,5 +394,86 @@ class SoftDeleteAndAuditLogTestCase(TestCase):
         self.assertEqual(Prontuario.objects.for_user(self.user).count(), 1)
 
 
+class PasswordResetTestCase(TestCase):
+    """
+    Testes de Recuperação Segura de Senha e E-mail Transacional (Item 9 / OWASP).
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(
+            username="psicologo_reset",
+            email="psicologo@fundacaodrjesus.org.br",
+            password="SenhaAntiga@123"
+        )
+
+    def test_password_reset_request_succeeds_for_valid_email(self):
+        """Solicitação de reset envia link e retorna 200 OK sem expor dados."""
+        response = self.client.post("/api/auth/password-reset/", {"email": "psicologo@fundacaodrjesus.org.br"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertIn("message", response.data)
+
+        # Verifica se o evento de auditoria foi registrado
+        log = AuditLog.objects.filter(usuario=self.user, recurso="PasswordReset").first()
+        self.assertIsNotNone(log)
+
+    def test_password_reset_request_neutralizes_enumeration_for_invalid_email(self):
+        """Solicitação para e-mail inexistente retorna 200 OK idêntico para prevenir enumeração de contas."""
+        response = self.client.post("/api/auth/password-reset/", {"email": "desconhecido@qualquer.com"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+    def test_password_reset_confirm_with_valid_token(self):
+        """Confirmação com token válido altera a senha do usuário com sucesso."""
+        from django.contrib.auth.tokens import default_token_generator
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        token = default_token_generator.make_token(self.user)
+        uidb64 = urlsafe_base64_encode(force_bytes(self.user.pk))
+
+        payload = {
+            "uid": uidb64,
+            "token": token,
+            "new_password": "NovaSenhaSegura@2026"
+        }
+        response = self.client.post("/api/auth/password-reset/confirm/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Autentica com a nova senha
+        self.user.refresh_from_db()
+        self.assertTrue(self.user.check_password("NovaSenhaSegura@2026"))
+
+        # Log forense de atualização de senha
+        log = AuditLog.objects.filter(usuario=self.user, recurso="UserPassword", acao=AuditLog.AcaoChoices.UPDATE).first()
+        self.assertIsNotNone(log)
+
+    def test_password_reset_confirm_rejects_invalid_token(self):
+        """Token adulterado ou inválido é categoricamente rejeitado (HTTP 400)."""
+        from django.utils.http import urlsafe_base64_encode
+        from django.utils.encoding import force_bytes
+
+        uidb64 = urlsafe_base64_encode(force_bytes(self.user.pk))
+        payload = {
+            "uid": uidb64,
+            "token": "token-falso-adulterado",
+            "new_password": "NovaSenhaSegura@2026"
+        }
+        response = self.client.post("/api/auth/password-reset/confirm/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn("error", response.data)
+
+
+class HashIntegrityTaskTestCase(TestCase):
+    """
+    Testes da Tarefa Periódica de Auditoria Forense SHA-256 de Documentos Hospitalares (Item 6).
+    """
+    def test_hash_integrity_task_executes_cleanly(self):
+        from sgi.tasks import verificar_integridade_hashes_anexos_task
+        resultado = verificar_integridade_hashes_anexos_task()
+        self.assertIn("status", resultado)
+        self.assertEqual(resultado["status"], "ok")
+        self.assertEqual(resultado["divergentes"], 0)
+
+
+
 
 
