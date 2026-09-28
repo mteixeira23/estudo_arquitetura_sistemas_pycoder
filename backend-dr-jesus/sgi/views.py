@@ -242,8 +242,10 @@ class DocumentoAnexoViewSet(BaseRLSModelViewSet):
 from .views_ia import (
     PerguntarProntuarioIAView,
     ProntuarioStreamIAView,
-    ChatGeralStreamIAView
+    ChatGeralStreamIAView,
+    HermesSREDiagnosticView
 )
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response

@@ -10,12 +10,14 @@ from .views import (
     PerguntarProntuarioIAView,
     ProntuarioStreamIAView,
     ChatGeralStreamIAView,
+    HermesSREDiagnosticView,
     HealthCheckView,
     EcosystemMetricsView,
     EcosystemActionView,
     PasswordResetRequestView,
     PasswordResetConfirmView
 )
+
 
 router = DefaultRouter()
 router.register(r'pacientes', PacienteViewSet, basename='paciente')
@@ -47,5 +49,9 @@ urlpatterns = [
     # Endpoints de Streaming Cognitivo em Tempo Real (SSE / ReadableStream conectado ao aiStream.js)
     path('ia/prontuario/<uuid:prontuario_id>/stream/', ProntuarioStreamIAView.as_view(), name='ia_stream_prontuario'),
     path('ia/chat/stream/', ChatGeralStreamIAView.as_view(), name='ia_stream_chat'),
+
+    # Endpoint Cognitivo do Maestro SRE (Hermes Agent / Nous Research)
+    path('ia/hermes/sre/', HermesSREDiagnosticView.as_view(), name='ia_hermes_sre'),
 ]
+
 

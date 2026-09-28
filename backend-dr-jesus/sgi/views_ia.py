@@ -139,3 +139,29 @@ class ChatGeralStreamIAView(APIView):
         response["Cache-Control"] = "no-cache, no-transform"
         response["X-Accel-Buffering"] = "no"
         return response
+
+
+class HermesSREDiagnosticView(APIView):
+    """
+    Endpoint Cognitivo do Maestro SRE (Hermes Agent / Nous Research).
+    Permite acionar diagnósticos em linguagem natural e receber laudos estruturados
+    com base no Tool Calling dos 10 guardiões de container.
+    """
+    permission_classes = [permissions.IsAdminUser]
+
+    def post(self, request, *args, **kwargs):
+        comando = request.data.get("comando", "Auditoria geral do ecossistema")
+        modo = request.data.get("modo", "auto")
+
+        logger.info(f"[Hermes SRE API] Operador {request.user} solicitou diagnóstico: '{comando}' (modo: {modo})")
+
+        from .ai.hermes_sre import executar_diagnostico_hermes
+        resultado = executar_diagnostico_hermes(
+            comando=str(comando).strip(),
+            modo=modo,
+            user=request.user,
+            request=request
+        )
+
+        return Response(resultado, status=status.HTTP_200_OK)
+

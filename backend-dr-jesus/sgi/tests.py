@@ -547,6 +547,56 @@ class HermesSREToolsTestCase(TestCase):
         self.assertGreaterEqual(full_rep["health_score"], 50)
 
 
+class HermesSREEndpointTestCase(TestCase):
+    """
+    Testes de Segurança e Execução Cognitiva do Endpoint do Hermes Agent SRE (Fase 3).
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.normal_user = User.objects.create_user(username="operador_sre_normal", password="password123")
+        self.admin_user = User.objects.create_superuser(
+            username="sre_chief_admin",
+            password="password123",
+            email="sre@singulariconsult.com.br"
+        )
+
+    def test_unauthenticated_request_rejected_401(self):
+        """Requisição sem credenciais é rejeitada com 401 Unauthorized."""
+        response = self.client.post("/api/ia/hermes/sre/", {"comando": "Auditoria geral"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+
+    def test_non_admin_user_rejected_403(self):
+        """Usuário sem is_staff/is_superuser é bloqueado com 403 Forbidden."""
+        self.client.force_authenticate(user=self.normal_user)
+        response = self.client.post("/api/ia/hermes/sre/", {"comando": "Auditoria geral"}, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+
+    def test_admin_user_can_execute_hermes_sre_diagnostic(self):
+        """Administrador SRE aciona o grafo cognitivo e recebe o laudo consolidado (HTTP 200)."""
+        self.client.force_authenticate(user=self.admin_user)
+        payload = {
+            "comando": "Hermes, audite o PostgreSQL e o RabbitMQ",
+            "modo": "auto"
+        }
+        response = self.client.post("/api/ia/hermes/sre/", payload, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["status"], "sucesso")
+        self.assertEqual(response.data["orquestrador"], "Hermes Agent (Nous Research)")
+        self.assertIn("score_saude", response.data)
+        self.assertIn("sintese_executiva", response.data)
+        self.assertIn("recomendacoes", response.data)
+        self.assertIn("telemetria", response.data)
+
+        # Rastreabilidade forense de IA no AuditLog
+        log = AuditLog.objects.filter(
+            usuario=self.admin_user,
+            acao=AuditLog.AcaoChoices.IA_QUERY,
+            recurso="HermesSRE"
+        ).first()
+        self.assertIsNotNone(log)
+
+
+
 
 
 
