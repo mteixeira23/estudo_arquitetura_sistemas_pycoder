@@ -977,6 +977,9 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       <button class="btn btn-secondary" onclick="executeAction('trigger_backup', this)">
         <span>📦</span> Snapshot Transacional
       </button>
+      <button class="btn btn-secondary" style="border-color: #38bdf8;" onclick="executeAction('generate_compliance_report', this)">
+        <span>📄</span> Relatório Mensal SLA (CFM/SUS)
+      </button>
     </div>
   </section>
 
@@ -998,6 +1001,11 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
           </div>
         </div>
         <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+          <!-- Sparkline de Tendência SRE (Item 3) -->
+          <div id="hermesSparklineWrap" style="text-align: right; margin-right: 0.5rem;">
+            <div style="font-size: 0.68rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Tendência SRE</div>
+            <div id="hermesSparkline" style="display: flex; align-items: center; justify-content: flex-end; gap: 0.2rem; min-height: 24px; min-width: 90px;"></div>
+          </div>
           <div style="text-align: right; margin-right: 0.5rem;">
             <div style="font-size: 0.7rem; color: #94a3b8; text-transform: uppercase; font-weight: 600;">Score da Patrulha</div>
             <div id="hermesHealthScore" style="font-size: 1.3rem; font-weight: 800; color: #38bdf8; font-family: var(--font-mono);">--%</div>
@@ -1482,6 +1490,10 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       }
       document.getElementById("globalStatus").innerHTML = statusHtml;
 
+      if (data.hermes_history) {
+        renderSparkline(data.hermes_history);
+      }
+
       const dateStr = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
       document.getElementById("lastSync").innerText = dateStr;
 
@@ -1599,6 +1611,14 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         const data = await res.json();
         if (res.ok && data.success) {
           showToast(data.message || 'Comando executado com sucesso.', 'success');
+          if (actionName === 'generate_compliance_report' && data.laudo_markdown) {
+            const reportContainer = document.getElementById('hermesReportContainer');
+            const termTitle = document.getElementById('hermesTerminalTitle');
+            const termBody = document.getElementById('hermesTerminalBody');
+            if (reportContainer) reportContainer.style.display = 'block';
+            if (termTitle) termTitle.innerText = `Relatório Executivo Mensal — ${data.periodo || ''} (SLA & CFM)`;
+            if (termBody) termBody.innerText = data.laudo_markdown;
+          }
           if (actionName === 'recalculate_health' || actionName === 'purge_cache') {
             loadMetrics();
           }
@@ -1611,6 +1631,30 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         btn.disabled = false;
         btn.innerHTML = originalText;
       }
+    }
+
+    function renderSparkline(history) {
+      const container = document.getElementById("hermesSparkline");
+      if (!container) return;
+      if (!history || history.length === 0) {
+        container.innerHTML = '<span style="font-size: 0.65rem; color: #64748b;">Sem histórico</span>';
+        return;
+      }
+      container.innerHTML = "";
+      history.slice(-12).forEach((pt, idx) => {
+        const bar = document.createElement("div");
+        const score = pt.score !== undefined ? pt.score : 100;
+        const h = Math.max(5, Math.round((score / 100) * 20));
+        const color = score >= 90 ? "#10b981" : (score >= 75 ? "#38bdf8" : (score >= 60 ? "#f59e0b" : "#ef4444"));
+        const timeStr = pt.timestamp ? new Date(pt.timestamp).toLocaleTimeString() : "";
+        bar.style.width = "5px";
+        bar.style.height = `${h}px`;
+        bar.style.background = color;
+        bar.style.borderRadius = "2px";
+        bar.style.cursor = "pointer";
+        bar.title = `Patrulha #${idx + 1}: ${score}% (${pt.status || 'OK'}) às ${timeStr}`;
+        container.appendChild(bar);
+      });
     }
 
     // -------------------------------------------------------------------------
@@ -1732,12 +1776,16 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       scoreEl.innerText = `${score}%`;
       scoreEl.style.color = score >= 90 ? '#10b981' : (score >= 75 ? '#38bdf8' : (score >= 60 ? '#f59e0b' : '#ef4444'));
 
+      if (data.historico) {
+        renderSparkline(data.historico);
+      }
+
       // Terminal Header & Body
       termTitle.innerText = `Laudo Pericial SRE — Status: ${data.status_geral || 'OPERACIONAL'} (${data.elapsed_ms || 0}ms)`;
       termTime.innerText = data.timestamp ? new Date(data.timestamp).toLocaleTimeString() : new Date().toLocaleTimeString();
       termBody.innerText = data.sintese_executiva || 'Nenhuma síntese emitida.';
 
-      // Recomendações Human-in-the-Loop
+      // Recomendações Human-in-the-Loop com Botões de Remediação em 1 Clique (Item 2)
       const recs = data.recomendacoes || [];
       if (recs.length > 0) {
         recsBox.style.display = 'block';
@@ -1745,7 +1793,25 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
         recs.forEach(r => {
           const recCard = document.createElement('div');
           recCard.className = 'rec-card';
-          recCard.innerHTML = `<span>⚡</span> ${r}`;
+          
+          let actionBtnHtml = '';
+          const rLower = r.toLowerCase();
+          if (rLower.includes('cache') || rLower.includes('redis') || rLower.includes('evic')) {
+            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #ec4899; color: #f472b6;" onclick="executeAction('purge_cache', this)"><span>🧹</span> Limpar Cache Redis (1-Clique)</button></div>`;
+          } else if (rLower.includes('tensor') || rLower.includes('ollama') || rLower.includes('ia') || rLower.includes('warm')) {
+            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #a855f7; color: #c084fc;" onclick="executeAction('warmup_ia', this)"><span>🧠</span> Aquecer Tensores IA (1-Clique)</button></div>`;
+          } else if (rLower.includes('backup') || rLower.includes('snapshot') || rLower.includes('banco') || rLower.includes('postgres') || rLower.includes('dados')) {
+            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #38bdf8; color: #38bdf8;" onclick="executeAction('trigger_backup', this)"><span>📦</span> Snapshot Transacional (1-Clique)</button></div>`;
+          } else if (rLower.includes('saúde') || rLower.includes('diagnóstico') || rLower.includes('recalcular')) {
+            actionBtnHtml = `<div style="margin-top: 0.5rem;"><button class="btn btn-secondary" style="padding: 0.25rem 0.6rem; font-size: 0.72rem; border-color: #10b981; color: #34d399;" onclick="executeAction('recalculate_health', this)"><span>🔄</span> Recalcular Saúde (1-Clique)</button></div>`;
+          }
+
+          recCard.innerHTML = `
+            <div>
+              <span>⚡</span> <span>${r}</span>
+            </div>
+            ${actionBtnHtml}
+          `;
           recsList.appendChild(recCard);
         });
       } else {

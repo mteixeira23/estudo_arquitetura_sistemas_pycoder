@@ -273,3 +273,16 @@ def patrulha_autonoma_hermes_sre_task():
         "guardioes_auditados": len(resultado.get("telemetria", {}))
     }
 
+
+@shared_task(name="sgi.tasks.gerar_relatorio_mensal_conformidade_sre_task")
+def gerar_relatorio_mensal_conformidade_sre_task():
+    """
+    Gera o Relatório Executivo Mensal de SLA & Conformidade Médica (CFM / SUS / Lei 13.787).
+    Executada no 1º dia de cada mês via Celery Beat às 01:00 UTC.
+    """
+    from .actions import EcosystemActionsService
+    logger.info("[Celery Beat] Iniciando consolidação do Relatório Executivo Mensal de SLA & Conformidade...")
+    res = EcosystemActionsService.generate_monthly_compliance_report(enviar_alertas=True)
+    logger.info("[Celery Beat] Relatório Executivo Mensal concluído: %s", res.get("message"))
+    return res
+

@@ -356,6 +356,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'sgi.tasks.patrulha_autonoma_hermes_sre_task',
         'schedule': crontab(hour='*/6', minute=0),  # A cada 6 horas (00:00, 06:00, 12:00, 18:00 UTC)
     },
+    'gerar-relatorio-mensal-conformidade-sre': {
+        'task': 'sgi.tasks.gerar_relatorio_mensal_conformidade_sre_task',
+        'schedule': crontab(day_of_month=1, hour=1, minute=0),  # Todo dia 1º do mês às 01:00 UTC
+    },
 }
 
 

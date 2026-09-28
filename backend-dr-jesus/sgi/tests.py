@@ -652,6 +652,45 @@ class HermesSREPeriodicTaskTestCase(TestCase):
                 self.assertTrue(res["webhook_disparado"])
                 self.assertTrue(mock_urlopen.called)
 
+    def test_hermes_sre_trend_history_persists_in_cache(self):
+        """Valida que os pontos de telemetria da patrulha alimentam o histórico de tendência SRE (Item 3)."""
+        from sgi.ai.hermes_sre import registrar_historico_patrulha
+        from django.core.cache import cache
+
+        cache.delete("hermes_sre_history")
+        hist = registrar_historico_patrulha(score=95, status_geral="OPERACIONAL", elapsed_ms=12.5)
+        self.assertEqual(len(hist), 1)
+        self.assertEqual(hist[0]["score"], 95)
+        self.assertEqual(hist[0]["status"], "OPERACIONAL")
+
+        cached_hist = cache.get("hermes_sre_history")
+        self.assertEqual(len(cached_hist), 1)
+
+    def test_monthly_compliance_report_generation_and_task(self):
+        """Valida a geração do Relatório Executivo Mensal de SLA & CFM e sua task no Celery (Item 4)."""
+        from sgi.actions import EcosystemActionsService
+        from sgi.tasks import gerar_relatorio_mensal_conformidade_sre_task
+
+        res = EcosystemActionsService.generate_monthly_compliance_report(enviar_alertas=False)
+        self.assertTrue(res["success"])
+        self.assertEqual(res["action"], "generate_compliance_report")
+        self.assertIn("score_saude", res)
+        self.assertIn("laudo_markdown", res)
+        self.assertIn("RELATÓRIO EXECUTIVO DE CONFORMIDADE CLÍNICA", res["laudo_markdown"])
+
+        # Executa a task assíncrona do Celery Beat
+        task_res = gerar_relatorio_mensal_conformidade_sre_task()
+        self.assertTrue(task_res["success"])
+
+    def test_monthly_compliance_report_is_registered_in_celery_beat(self):
+        """Garante que o relatório mensal está agendado no CELERY_BEAT_SCHEDULE para o dia 1º de cada mês."""
+        from django.conf import settings
+        schedule = getattr(settings, "CELERY_BEAT_SCHEDULE", {})
+        self.assertIn("gerar-relatorio-mensal-conformidade-sre", schedule)
+        entry = schedule["gerar-relatorio-mensal-conformidade-sre"]
+        self.assertEqual(entry["task"], "sgi.tasks.gerar_relatorio_mensal_conformidade_sre_task")
+
+
 
 
 

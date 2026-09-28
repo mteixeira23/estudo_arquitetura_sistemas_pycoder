@@ -235,6 +235,29 @@ def get_hermes_sre_graph():
     return _HERMES_GRAPH
 
 
+def registrar_historico_patrulha(score: int, status_geral: str, elapsed_ms: float) -> List[Dict[str, Any]]:
+    """
+    Persiste o ponto de telemetria no histórico de tendência de SRE (Item 3).
+    Mantém os últimos 20 pontos de medição em cache por até 7 dias.
+    """
+    from django.core.cache import cache
+    cache_key = "hermes_sre_history"
+    try:
+        hist = cache.get(cache_key) or []
+        hist.append({
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "score": score,
+            "status": status_geral,
+            "latency_ms": elapsed_ms
+        })
+        hist = hist[-20:]
+        cache.set(cache_key, hist, timeout=86400 * 7)
+        return hist
+    except Exception as exc:
+        logger.warning(f"[Hermes SRE] Falha ao registrar histórico de patrulha: {exc}")
+        return []
+
+
 # ==============================================================================
 # ENTRADA DE EXECUÇÃO PÚBLICA
 # ==============================================================================
@@ -259,6 +282,13 @@ def executar_diagnostico_hermes(comando: str = "Auditoria geral do ecossistema",
 
     final_state = graph.invoke(initial_state)
     elapsed = round((time.perf_counter() - t0) * 1000, 2)
+
+    # Persiste no histórico de tendência SRE (Item 3)
+    historico = registrar_historico_patrulha(
+        score=final_state.get("score_saude", 100),
+        status_geral=final_state.get("status_geral", "OPERACIONAL"),
+        elapsed_ms=elapsed
+    )
 
     # Rastreabilidade forense LGPD / CFM
     if user and user.is_authenticated:
@@ -290,5 +320,6 @@ def executar_diagnostico_hermes(comando: str = "Auditoria geral do ecossistema",
         "guardioes_acionados": final_state.get("guardioes_selecionados", []),
         "sintese_executiva": final_state.get("sintese_executiva"),
         "recomendacoes": final_state.get("recomendacoes"),
-        "telemetria": final_state.get("dados_coletados")
+        "telemetria": final_state.get("dados_coletados"),
+        "historico": historico
     }

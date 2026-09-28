@@ -360,9 +360,11 @@ class EcosystemActionView(APIView):
             result = EcosystemActionsService.recalculate_health()
         elif action == "trigger_backup":
             result = EcosystemActionsService.trigger_backup()
+        elif action == "generate_compliance_report":
+            result = EcosystemActionsService.generate_monthly_compliance_report(enviar_alertas=False)
         else:
             return Response(
-                {"error": f"Ação desconhecida: '{action}'. Ações válidas: purge_cache, warmup_ia, recalculate_health, trigger_backup"},
+                {"error": f"Ação desconhecida: '{action}'. Ações válidas: purge_cache, warmup_ia, recalculate_health, trigger_backup, generate_compliance_report"},
                 status=400
             )
 

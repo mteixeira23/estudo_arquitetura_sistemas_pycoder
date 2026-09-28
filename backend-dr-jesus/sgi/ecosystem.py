@@ -455,7 +455,8 @@ class EcosystemMetricsService:
                 "score_percent": round((ok_count / total) * 100, 1) if total else 0
             },
             "components": components,
-            "business": cls.check_business_data()
+            "business": cls.check_business_data(),
+            "hermes_history": cache.get("hermes_sre_history", [])
         }
 
         try:
