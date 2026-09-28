@@ -198,6 +198,54 @@ def patrulha_autonoma_hermes_sre_task():
         except Exception as exc:
             logger.error(f"[Hermes SRE Alerta] Falha ao despachar e-mail de alerta: {exc}")
 
+        # 2. Despacho de Webhook Instantâneo (Telegram, Discord, Slack, n8n, etc.)
+        webhook_url = os.environ.get("SRE_ALERT_WEBHOOK_URL", "").strip()
+        webhook_disparado = False
+        if webhook_url:
+            try:
+                import json
+                import urllib.request
+
+                if "discord.com" in webhook_url:
+                    webhook_data = {
+                        "content": f"🚨 **[ALERTA HERMES SRE]** Anomalia detectada no cluster! Status: `{status_geral}` | Score: `{score_saude}%`",
+                        "embeds": [{
+                            "title": f"Laudo Pericial Hermes SRE — Status: {status_geral}",
+                            "description": sintese[:1800],
+                            "color": 15158332 if status_geral == "CRÍTICO" else 15844367,
+                            "url": "https://api.singulariconsult.com.br/dashboard/",
+                            "footer": {"text": "SGI Fundação Dr. Jesus • Padrão SCSI PycoderBR"}
+                        }]
+                    }
+                else:
+                    webhook_data = {
+                        "text": (
+                            f"🚨 *[ALERTA HERMES SRE]* Anomalia detectada no cluster ({status_geral} - Score: {score_saude}%)\n\n"
+                            f"{sintese[:800]}\n\n"
+                            f"🔗 Painel de Controle: https://api.singulariconsult.com.br/dashboard/"
+                        ),
+                        "status": status_geral,
+                        "score": score_saude,
+                        "orquestrador": "Hermes Agent (Nous Research)",
+                        "dashboard_url": "https://api.singulariconsult.com.br/dashboard/"
+                    }
+
+                req = urllib.request.Request(
+                    webhook_url,
+                    data=json.dumps(webhook_data).encode("utf-8"),
+                    headers={
+                        "Content-Type": "application/json",
+                        "User-Agent": "SCSI-Hermes-SRE-Alert/1.0"
+                    },
+                    method="POST"
+                )
+                with urllib.request.urlopen(req, timeout=4.0) as resp:
+                    if resp.status in (200, 204):
+                        webhook_disparado = True
+                        logger.info(f"[Hermes SRE Alerta] Webhook despachado com sucesso (HTTP {resp.status}).")
+            except Exception as exc:
+                logger.error(f"[Hermes SRE Alerta] Falha ao despachar webhook: {exc}")
+
         # Registra o incidente na trilha forense do AuditLog
         try:
             AuditLog.registrar(
@@ -209,7 +257,8 @@ def patrulha_autonoma_hermes_sre_task():
                     "alerta": "INCIDENTE_SRE_CLUSTER",
                     "score_saude": score_saude,
                     "status_geral": status_geral,
-                    "recomendacoes": recomendacoes
+                    "recomendacoes": recomendacoes,
+                    "webhook_disparado": webhook_disparado
                 }
             )
         except Exception as exc:
@@ -220,6 +269,7 @@ def patrulha_autonoma_hermes_sre_task():
         "score_saude": score_saude,
         "status_geral": status_geral,
         "alerta_disparado": alerta_disparado,
+        "webhook_disparado": webhook_disparado if alerta_disparado else False,
         "guardioes_auditados": len(resultado.get("telemetria", {}))
     }
 

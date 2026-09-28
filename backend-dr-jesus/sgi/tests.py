@@ -1,4 +1,5 @@
 import uuid
+from unittest import mock
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from rest_framework.test import APIClient
@@ -624,6 +625,32 @@ class HermesSREPeriodicTaskTestCase(TestCase):
         self.assertIn("patrulha-autonoma-hermes-sre-a-cada-6-horas", schedule)
         entry = schedule["patrulha-autonoma-hermes-sre-a-cada-6-horas"]
         self.assertEqual(entry["task"], "sgi.tasks.patrulha_autonoma_hermes_sre_task")
+
+    @mock.patch("urllib.request.urlopen")
+    def test_hermes_sre_periodic_task_dispatches_webhook_on_incident(self, mock_urlopen):
+        """Valida que o webhook instantâneo é despachado quando há anomalia e SRE_ALERT_WEBHOOK_URL está configurada."""
+        import os
+        from unittest.mock import MagicMock
+        from sgi.tasks import patrulha_autonoma_hermes_sre_task
+
+        mock_resp = MagicMock()
+        mock_resp.status = 200
+        mock_resp.__enter__.return_value = mock_resp
+        mock_urlopen.return_value = mock_resp
+
+        with mock.patch.dict(os.environ, {"SRE_ALERT_WEBHOOK_URL": "https://discord.com/api/webhooks/mock_test"}):
+            with mock.patch("sgi.ai.hermes_sre.executar_diagnostico_hermes") as mock_diag:
+                mock_diag.return_value = {
+                    "status_geral": "ATENÇÃO",
+                    "score_saude": 65,
+                    "sintese_executiva": "Degradação simulada na fila RabbitMQ",
+                    "recomendacoes": ["Reiniciar broker"],
+                    "telemetria": {"rabbitmq": {"status": "warning"}}
+                }
+                res = patrulha_autonoma_hermes_sre_task()
+                self.assertTrue(res["alerta_disparado"])
+                self.assertTrue(res["webhook_disparado"])
+                self.assertTrue(mock_urlopen.called)
 
 
 
