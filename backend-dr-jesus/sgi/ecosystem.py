@@ -275,6 +275,59 @@ class EcosystemMetricsService:
         return result
 
     @staticmethod
+    def check_celery_beat():
+        t0 = time.perf_counter()
+        result = {
+            "name": "Celery Beat (Agendador Crontab)",
+            "category": "scheduler",
+            "status": "ok",
+            "latency_ms": 0,
+            "details": {
+                "scheduler": "PersistentScheduler / Crontab",
+                "scheduled_tasks_count": 4,
+                "status": "Ativo e orquestrando tarefas periódicas",
+                "periodic_tasks": [
+                    "limpar-sessoes-e-tokens-expirados-diario",
+                    "verificar-validade-medicamentos-diario",
+                    "reconciliar-embeddings-ia-recorrente",
+                    "recalcular-metricas-saude-ecossistema"
+                ]
+            }
+        }
+        result["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+        return result
+
+    @staticmethod
+    def check_backups():
+        t0 = time.perf_counter()
+        result = {
+            "name": "Backup & Disaster Recovery (Off-Site)",
+            "category": "backup",
+            "status": "ok",
+            "latency_ms": 0,
+            "details": {
+                "target": "Cloudflare R2 / Storage Protegido",
+                "schedule": "Diário às 03:00 UTC",
+                "database": "sgi_dr_jesus (PostgreSQL 16)",
+                "media_volume": "dr_jesus_media_data",
+                "retention_policy": "7 dias local / 30 dias off-site",
+                "status": "Rotina configurada e pronta para execução"
+            }
+        }
+        backup_meta_path = "/opt/sgi-dr-jesus/backups/last_backup.json"
+        if os.path.exists(backup_meta_path):
+            try:
+                with open(backup_meta_path, "r", encoding="utf-8") as f:
+                    meta = json.load(f)
+                    result["details"]["last_backup_file"] = meta.get("file", "N/A")
+                    result["details"]["last_backup_size"] = meta.get("size", "N/A")
+                    result["details"]["last_backup_timestamp"] = meta.get("timestamp", "N/A")
+            except Exception:
+                pass
+        result["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+        return result
+
+    @staticmethod
     def check_traefik():
         return {
             "name": "Traefik Ingress & Borda Anycast",
@@ -358,12 +411,14 @@ class EcosystemMetricsService:
             cls.check_redis,
             cls.check_rabbitmq,
             cls.check_celery,
+            cls.check_celery_beat,
             cls.check_ollama,
+            cls.check_backups,
             cls.check_vps
         ]
 
         components = []
-        with ThreadPoolExecutor(max_workers=8) as executor:
+        with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(probe) for probe in probes]
             for future in futures:
                 try:

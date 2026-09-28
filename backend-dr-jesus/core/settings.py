@@ -302,6 +302,28 @@ CELERY_TASK_ROUTES = {
     'sgi.tasks.*': {'queue': 'default'},
 }
 
+# --- Celery Beat: Agendador de Tarefas Periódicas (Crontab / Autonomia SCSI) ---
+from celery.schedules import crontab
+
+CELERY_BEAT_SCHEDULE = {
+    'limpar-sessoes-e-tokens-expirados-diario': {
+        'task': 'sgi.tasks.limpar_sessoes_e_tokens_expirados_task',
+        'schedule': crontab(hour=3, minute=0),  # Todo dia às 03:00 UTC
+    },
+    'verificar-validade-medicamentos-diario': {
+        'task': 'sgi.tasks.verificar_validade_medicamentos_task',
+        'schedule': crontab(hour=4, minute=0),  # Todo dia às 04:00 UTC
+    },
+    'reconciliar-embeddings-ia-recorrente': {
+        'task': 'sgi.tasks_ia.sincronizar_embeddings_background_task',
+        'schedule': 900.0,  # A cada 15 minutos (900s)
+    },
+    'recalcular-metricas-saude-ecossistema': {
+        'task': 'sgi.tasks.recalcular_metricas_ecossistema_task',
+        'schedule': 300.0,  # A cada 5 minutos (300s)
+    },
+}
+
 # --- SCSI: Otimizações de Testes Unitários e End-to-End ---
 if 'test' in sys.argv:
     CELERY_TASK_ALWAYS_EAGER = True

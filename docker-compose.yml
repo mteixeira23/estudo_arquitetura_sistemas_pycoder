@@ -321,6 +321,54 @@ services:
           memory: 256M
 
   # ----------------------------------------------------------------------------
+  # 6.1. CELERY BEAT: Orquestrador temporal de tarefas periódicas (Crontab SCSI)
+  # ----------------------------------------------------------------------------
+  celery_beat:
+    image: scsi/backend:latest
+    command: ["celery", "-A", "core", "beat", "-l", "info"]
+    secrets:
+      - scsi_django_secret_key
+      - scsi_postgres_db
+      - scsi_postgres_user
+      - scsi_postgres_password
+      - scsi_redis_password
+      - scsi_rabbitmq_user
+      - scsi_rabbitmq_password
+    environment:
+      DEBUG: "False"
+      POSTGRES_HOST: "db"
+      POSTGRES_PORT: "5432"
+      REDIS_HOST: "redis"
+      REDIS_PORT: "6379"
+      RABBITMQ_HOST: "rabbitmq"
+      RABBITMQ_PORT: "5672"
+      OLLAMA_HOST: "http://ollama:11434"
+    networks:
+      - scsi_internal
+      - scsi_data
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.labels.scsi_storage == true
+      update_config:
+        parallelism: 1
+        order: stop-first
+        failure_action: rollback
+        monitor: 15s
+      rollback_config:
+        parallelism: 1
+        order: stop-first
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+        reservations:
+          cpus: "0.05"
+          memory: 64M
+
+  # ----------------------------------------------------------------------------
   # 7. MOTOR COGNITIVO LOCAL: Ollama (Llama 3.2 3B e nomic-embed-text)
   # ----------------------------------------------------------------------------
   ollama:

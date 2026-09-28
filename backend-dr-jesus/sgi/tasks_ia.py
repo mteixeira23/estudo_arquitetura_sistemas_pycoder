@@ -184,3 +184,31 @@ def executar_rag_prontuario_task(self, prontuario_id: str, pergunta: str):
         )
         raise self.retry(exc=exc, countdown=15)
 
+
+@shared_task(name="sgi.tasks_ia.sincronizar_embeddings_background_task")
+def sincronizar_embeddings_background_task():
+    """
+    Varredura periódica de reconciliação de IA (RAG Background Worker).
+    Busca Chunks de Prontuários que ainda não foram vetorizados e gera embeddings de 768 dimensões.
+    """
+    logger.info("[Celery IA Beat] Iniciando reconciliação periódica de embeddings vetoriais...")
+    from .models import ProntuarioChunk
+    from .ai.ollama_client import gerar_embedding_texto
+
+    chunks_pendentes = ProntuarioChunk.objects.for_system().filter(embedding__isnull=True)[:20]
+    total = chunks_pendentes.count()
+    processados = 0
+
+    for chunk in chunks_pendentes:
+        try:
+            vetor = gerar_embedding_texto(chunk.texto_chunk)
+            if vetor:
+                chunk.embedding = vetor
+                chunk.save(update_fields=['embedding', 'updated_at'])
+                processados += 1
+        except Exception as e:
+            logger.warning(f"[Celery IA Beat] Falha ao vetorizar chunk {chunk.id}: {e}")
+
+    logger.info(f"[Celery IA Beat] Reconciliação concluída: {processados}/{total} chunks vetorizados.")
+    return {"status": "ok", "processados": processados, "total_pendentes": total}
+
