@@ -87,7 +87,25 @@ class BaseRLSModelViewSet(viewsets.ModelViewSet):
 
     def perform_destroy(self, instance):
         instance_id = str(instance.id)
-        instance.delete()
+        recurso_nome = instance.__class__.__name__
+        user = self.request.user if self.request.user.is_authenticated else None
+
+        # Lei Federal nº 13.787/2018: Exclusão lógica (Soft Delete) para cumprimento de guarda de 20 anos
+        if hasattr(instance, 'soft_delete'):
+            instance.soft_delete(user=user)
+        else:
+            instance.delete()
+
+        # Trilha de Auditoria Forense LGPD (Art. 6º, X): registra evento de exclusão
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=user,
+            acao=AuditLog.AcaoChoices.SOFT_DELETE,
+            recurso=recurso_nome,
+            recurso_id=instance_id,
+            request=self.request
+        )
+
         if self.realtime_table_name:
             broadcast_realtime_event(
                 event_type="DELETE",
@@ -107,6 +125,21 @@ class PacienteViewSet(BaseRLSModelViewSet):
     def get_queryset(self):
         return Paciente.objects.for_user(self.request.user)
 
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        # Rastreabilidade LGPD: registra visualização dos dados cadastrais do acolhido
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=request.user,
+            acao=AuditLog.AcaoChoices.VIEW,
+            recurso="Paciente",
+            recurso_id=str(instance.id),
+            detalhes={"cpf": instance.cpf},
+            request=request
+        )
+        return Response(serializer.data)
+
 class ProntuarioViewSet(BaseRLSModelViewSet):
     queryset = Prontuario.objects.none()
     serializer_class = ProntuarioSerializer
@@ -115,6 +148,21 @@ class ProntuarioViewSet(BaseRLSModelViewSet):
 
     def get_queryset(self):
         return Prontuario.objects.for_user(self.request.user)
+
+    def retrieve(self, request, *args, **kwargs):
+        instance = self.get_object()
+        serializer = self.get_serializer(instance)
+        # Rastreabilidade CFM e LGPD: registra visualização das anotações clínicas
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=request.user,
+            acao=AuditLog.AcaoChoices.VIEW,
+            recurso="Prontuario",
+            recurso_id=str(instance.id),
+            detalhes={"paciente_id": str(instance.paciente_id)},
+            request=request
+        )
+        return Response(serializer.data)
 
 # --- Módulos Almoxarifado / Estoque / Doações ---
 

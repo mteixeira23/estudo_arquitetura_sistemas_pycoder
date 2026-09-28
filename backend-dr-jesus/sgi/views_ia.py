@@ -35,6 +35,17 @@ class PerguntarProntuarioIAView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        # Rastreabilidade LGPD / CFM: auditoria forense da consulta cognitiva assíncrona
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=request.user,
+            acao=AuditLog.AcaoChoices.IA_QUERY,
+            recurso="Prontuario",
+            recurso_id=str(prontuario.id),
+            detalhes={"tipo": "async_task", "pergunta": pergunta.strip()[:200]},
+            request=request
+        )
+
         # Agenda a tarefa no Celery pós-commit
         task = executar_rag_prontuario_task.delay(str(prontuario.id), pergunta.strip())
 
@@ -70,6 +81,17 @@ class ProntuarioStreamIAView(APIView):
                 {"erro": "Prontuário não encontrado ou acesso não autorizado."}, 
                 status=status.HTTP_404_NOT_FOUND
             )
+
+        # Rastreabilidade LGPD / CFM: auditoria forense da consulta cognitiva streaming
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=request.user,
+            acao=AuditLog.AcaoChoices.IA_QUERY,
+            recurso="Prontuario",
+            recurso_id=str(prontuario.id),
+            detalhes={"tipo": "streaming_sse", "pergunta": str(pergunta).strip()[:200]},
+            request=request
+        )
 
         logger.info(f"[IA Streaming] Usuário {request.user} iniciou stream para prontuário {prontuario.id}")
         gerador = gerar_stream_prontuario(

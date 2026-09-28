@@ -24,19 +24,24 @@ class RLSSecurityManager(models.Manager):
             raise PermissionError("Criação negada: Você DEVE associar um 'owner' válido para cumprir a segurança RLS.")
         return super().get_queryset().create(**kwargs)
 
-    def for_user(self, user):
+    def for_user(self, user, include_deleted=False):
         # Contornamos nossa própria trava apenas para injetar o filtro seguro
         qs = super().get_queryset()
+        if not include_deleted:
+            qs = qs.filter(is_deleted=False)
         if user and user.is_superuser:
             return qs
         return qs.filter(owner=user)
 
-    def for_system(self):
+    def for_system(self, include_deleted=False):
         """
         Acesso restrito e explícito de sistema para pipelines internos (Celery Worker / LangGraph / Streaming).
         Mantém a exigência explícita, preservando o Fail-Closed contra chamadas diretas (.all(), .filter(), etc).
         """
-        return super().get_queryset()
+        qs = super().get_queryset()
+        if not include_deleted:
+            qs = qs.filter(is_deleted=False)
+        return qs
 
 
 class BaseModel(models.Model):
@@ -45,10 +50,22 @@ class BaseModel(models.Model):
     - ID sequencial no tempo com UUIDv7 (sem fragmentação B-Tree no PostgreSQL).
     - RLS Fail-Closed obrigatório via RLSSecurityManager.
     - Owner obrigatório para rastreabilidade e isolamento multi-inquilino.
+    - Soft Delete Universal (Lei Federal nº 13.787/2018 - Guarda Mínima de 20 Anos de Prontuários).
     """
     id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+
+    # Governança de Exclusão Lógica e Retenção Hospitalar (Lei 13.787/2018)
+    is_deleted = models.BooleanField(default=False, db_index=True)
+    deleted_at = models.DateTimeField(null=True, blank=True)
+    deleted_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="%(app_label)s_%(class)s_deleted"
+    )
 
     owner = models.ForeignKey(
         settings.AUTH_USER_MODEL, 
@@ -57,6 +74,21 @@ class BaseModel(models.Model):
     )
 
     objects = RLSSecurityManager()
+
+    def soft_delete(self, user=None):
+        """Exclusão lógica que preserva o registro no PostgreSQL para cumprimento de guarda legal."""
+        from django.utils import timezone
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.deleted_by = user
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
+
+    def restore(self):
+        """Restaura o registro excluído logicamente."""
+        self.is_deleted = False
+        self.deleted_at = None
+        self.deleted_by = None
+        self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
 
     class Meta:
         abstract = True
@@ -201,3 +233,86 @@ class DocumentoAnexo(BaseModel):
 
     def __str__(self):
         return f"{self.titulo} ({self.tipo_documento}) - IA: {self.status_processamento_ia}"
+
+
+# --- Trilha de Auditoria Forense (LGPD Art. 6º, X e Conselho Federal de Medicina) ---
+
+class AuditLog(models.Model):
+    """
+    Livro-razão append-only de auditoria clínica e de conformidade LGPD.
+    Rastreia acessos a prontuários (quem visualizou), consultas à IA (RAG) e exclusões lógicas.
+    """
+    class AcaoChoices(models.TextChoices):
+        VIEW = "VIEW", "Visualização de Prontuário / Acolhido"
+        CREATE = "CREATE", "Criação de Registro"
+        UPDATE = "UPDATE", "Atualização de Registro"
+        SOFT_DELETE = "SOFT_DELETE", "Exclusão Lógica (Soft Delete)"
+        IA_QUERY = "IA_QUERY", "Consulta Cognitiva / RAG IA"
+        EXPORT = "EXPORT", "Exportação de Dados Clínicos"
+
+    id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="audit_logs"
+    )
+    usuario_username = models.CharField(max_length=150, blank=True, null=True)
+    acao = models.CharField(max_length=50, choices=AcaoChoices.choices, db_index=True)
+    recurso = models.CharField(max_length=100, db_index=True, help_text="Ex: Prontuario, Paciente, DocumentoAnexo, RAG_Context")
+    recurso_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    detalhes = models.JSONField(default=dict, blank=True)
+    ip_address = models.GenericIPAddressField(null=True, blank=True)
+    user_agent = models.TextField(blank=True, null=True)
+    timestamp = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-timestamp"]
+        verbose_name = "Trilha de Auditoria Forense"
+        verbose_name_plural = "Trilhas de Auditoria Forense"
+
+    def __str__(self):
+        user_str = self.usuario_username or (self.usuario.username if self.usuario else "Sistema")
+        return f"[{self.timestamp:%Y-%m-%d %H:%M:%S}] {user_str} -> {self.acao} ({self.recurso} #{self.recurso_id})"
+
+    @classmethod
+    def registrar(cls, usuario, acao, recurso, recurso_id=None, detalhes=None, request=None):
+        """
+        Método seguro e fail-safe para registro de auditoria.
+        Nunca interrompe a transação principal em caso de falha de telemetria.
+        """
+        try:
+            ip = None
+            ua = None
+            user_obj = None
+            username = "Sistema"
+
+            if request:
+                ip = getattr(request, 'client_ip', None) or request.META.get('REMOTE_ADDR')
+                ua = request.META.get('HTTP_USER_AGENT', '')[:500]
+                if hasattr(request, 'user') and request.user.is_authenticated:
+                    user_obj = request.user
+                    username = request.user.username
+
+            if usuario and not user_obj:
+                if hasattr(usuario, 'is_authenticated') and usuario.is_authenticated:
+                    user_obj = usuario
+                    username = usuario.username
+                elif isinstance(usuario, str):
+                    username = usuario
+
+            return cls.objects.create(
+                usuario=user_obj,
+                usuario_username=username,
+                acao=acao,
+                recurso=recurso,
+                recurso_id=str(recurso_id) if recurso_id else None,
+                detalhes=detalhes or {},
+                ip_address=ip,
+                user_agent=ua
+            )
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).warning(f"Falha ao registrar AuditLog ({exc}): {acao} {recurso}")
+            return None

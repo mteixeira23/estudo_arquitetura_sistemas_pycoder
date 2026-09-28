@@ -5,7 +5,7 @@ from rest_framework.test import APIClient
 from rest_framework import status
 from django.http import StreamingHttpResponse
 
-from .models import Paciente, Prontuario, ProntuarioChunk, EstoqueItem, DocumentoAnexo
+from .models import Paciente, Prontuario, ProntuarioChunk, EstoqueItem, DocumentoAnexo, AuditLog
 from .ai.streaming import gerar_stream_prontuario, gerar_stream_chat_geral, DISCLAIMER_CLINICO
 from .ai.graph import grafo_rag_clinico, auditar_seguranca_clinica
 from .events import broadcast_realtime_event
@@ -301,6 +301,78 @@ class EcosystemActionsTestCase(TestCase):
         response = self.client.post("/api/dashboard/action/", {"action": "comando_inexistente"}, format="json")
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
         self.assertIn("error", response.data)
+
+
+class SoftDeleteAndAuditLogTestCase(TestCase):
+    """
+    Testes de Exclusão Lógica (Lei Federal nº 13.787/2018) e Trilha de Auditoria Forense (LGPD Art. 6º, X).
+    """
+    def setUp(self):
+        self.client = APIClient()
+        self.user = User.objects.create_user(username="medico_auditoria", password="password123")
+        self.paciente = Paciente.objects.create(
+            nome_completo="Acolhido Teste LGPD",
+            cpf="999.888.777-66",
+            data_nascimento="1980-01-01",
+            owner=self.user
+        )
+        self.prontuario = Prontuario.objects.create(
+            paciente=self.paciente,
+            observacoes_clinicas="Observação clínica para auditoria.",
+            owner=self.user
+        )
+
+    def test_soft_delete_preserves_database_record(self):
+        """Exclusão lógica não apaga fisicamente o registro do banco de dados (Lei 13.787/2018)."""
+        self.prontuario.soft_delete(user=self.user)
+        self.assertTrue(self.prontuario.is_deleted)
+        self.assertIsNotNone(self.prontuario.deleted_at)
+        self.assertEqual(self.prontuario.deleted_by, self.user)
+
+        # Não aparece na consulta normal do usuário
+        self.assertEqual(Prontuario.objects.for_user(self.user).count(), 0)
+
+        # Mas permanece no banco e acessível explicitamente com include_deleted=True
+        self.assertEqual(Prontuario.objects.for_user(self.user, include_deleted=True).count(), 1)
+
+        # Restauração recupera o registro para o estado ativo
+        self.prontuario.restore()
+        self.assertFalse(self.prontuario.is_deleted)
+        self.assertEqual(Prontuario.objects.for_user(self.user).count(), 1)
+
+    def test_viewset_delete_performs_soft_delete_and_audit(self):
+        """DELETE na API REST executa soft delete e registra evento na trilha AuditLog."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.delete(f"/api/prontuarios/{self.prontuario.id}/")
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+
+        # Verifica que o registro ainda existe fisicamente no banco com is_deleted=True
+        p_db = Prontuario.objects.for_system(include_deleted=True).get(id=self.prontuario.id)
+        self.assertTrue(p_db.is_deleted)
+        self.assertEqual(p_db.deleted_by, self.user)
+
+        # Verifica o AuditLog gerado
+        log = AuditLog.objects.filter(
+            recurso="Prontuario",
+            recurso_id=str(self.prontuario.id),
+            acao=AuditLog.AcaoChoices.SOFT_DELETE
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.usuario, self.user)
+
+    def test_view_prontuario_registers_view_audit_log(self):
+        """Visualização (GET /retrieve) de prontuário gera registro na trilha de auditoria LGPD."""
+        self.client.force_authenticate(user=self.user)
+        response = self.client.get(f"/api/prontuarios/{self.prontuario.id}/")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        log = AuditLog.objects.filter(
+            recurso="Prontuario",
+            recurso_id=str(self.prontuario.id),
+            acao=AuditLog.AcaoChoices.VIEW
+        ).first()
+        self.assertIsNotNone(log)
+        self.assertEqual(log.usuario, self.user)
 
 
 

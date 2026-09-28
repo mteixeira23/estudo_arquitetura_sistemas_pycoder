@@ -7,7 +7,8 @@ from .models import (
     EstoqueItem, 
     MovimentacaoEstoque, 
     Doacao, 
-    DocumentoAnexo
+    DocumentoAnexo,
+    AuditLog
 )
 
 # Customização do Cabeçalho e Título do Django Admin com Atalho para o Mission Control
@@ -106,3 +107,27 @@ class DocumentoAnexoAdmin(admin.ModelAdmin):
         if request.user.is_superuser:
             return DocumentoAnexo.objects.for_system()
         return DocumentoAnexo.objects.for_user(request.user)
+
+
+@admin.register(AuditLog)
+class AuditLogAdmin(admin.ModelAdmin):
+    """
+    Livro-razão imutável de Auditoria Forense e LGPD.
+    Apenas visualização autorizada; sem permissão de criação manual, edição ou exclusão.
+    """
+    list_display = ('timestamp', 'usuario_username', 'acao', 'recurso', 'recurso_id', 'ip_address')
+    list_filter = ('acao', 'recurso', 'timestamp')
+    search_fields = ('recurso_id', 'usuario_username', 'ip_address')
+    readonly_fields = (
+        'id', 'usuario', 'usuario_username', 'acao', 'recurso', 
+        'recurso_id', 'detalhes', 'ip_address', 'user_agent', 'timestamp'
+    )
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_change_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False
