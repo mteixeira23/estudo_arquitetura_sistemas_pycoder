@@ -11,6 +11,7 @@ import socket
 import urllib.request
 import json
 from datetime import datetime
+from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.db import connection
@@ -136,7 +137,7 @@ class EcosystemMetricsService:
         result = {
             "name": "Celery Workers (Async Tasks)",
             "category": "workers",
-            "status": "error",
+            "status": "warning",
             "latency_ms": 0,
             "details": {}
         }
@@ -157,15 +158,16 @@ class EcosystemMetricsService:
                     "ia_queue": "ia_tasks"
                 }
             else:
-                # Se o inspect demorou mas o worker está rodando
-                result["status"] = "ok"
+                # Alerta se inspect expirou sem resposta ativa dos workers
+                result["status"] = "warning"
                 result["latency_ms"] = elapsed
                 result["details"] = {
-                    "active_workers_count": 1,
-                    "note": "Worker operacional em background",
+                    "active_workers_count": 0,
+                    "note": "Workers ocupados ou sem resposta ao ping no timeout de 1.5s",
                     "broker_connected": True
                 }
         except Exception as exc:
+            result["status"] = "error"
             result["details"]["error"] = str(exc)
         return result
 
@@ -180,24 +182,44 @@ class EcosystemMetricsService:
             "details": {}
         }
         ollama_host = getattr(settings, "OLLAMA_HOST", "http://ollama:11434")
+        required_models = ["llama3.2:3b", "nomic-embed-text"]
         try:
             req = urllib.request.Request(f"{ollama_host}/api/tags", headers={"User-Agent": "SCSI-HealthProbe/1.0"})
             with urllib.request.urlopen(req, timeout=2.0) as resp:
                 data = json.loads(resp.read().decode("utf-8"))
-                models = [m.get("name") for m in data.get("models", [])]
+                models = [m.get("name", "") for m in data.get("models", [])]
                 elapsed = round((time.perf_counter() - t0) * 1000, 2)
-                result["status"] = "ok"
                 result["latency_ms"] = elapsed
+
+                # Valida se os modelos mandatórios para IA e embeddings estão disponíveis
+                missing_models = [
+                    rm for rm in required_models
+                    if not any(rm in m for m in models)
+                ]
+
+                if not models:
+                    result["status"] = "warning"
+                    status_text = "Ollama online, mas nenhum modelo baixado no volume"
+                elif missing_models:
+                    result["status"] = "warning"
+                    status_text = f"Ollama online, aguardando modelo(s) mandatório(s): {', '.join(missing_models)}"
+                else:
+                    result["status"] = "ok"
+                    status_text = "Online e modelos mandatórios prontos"
+
                 result["details"] = {
                     "endpoint": ollama_host,
                     "models_count": len(models),
                     "installed_models": models if models else ["Aguardando download dos tensores"],
-                    "status": "Online e respondendo"
+                    "required_models": required_models,
+                    "missing_models": missing_models,
+                    "status": status_text
                 }
         except Exception as exc:
+            result["status"] = "error"
             result["details"] = {
                 "endpoint": ollama_host,
-                "status": "Offline ou em inicialização",
+                "status": "Offline ou inacessível",
                 "error": str(exc)
             }
         return result
@@ -288,7 +310,8 @@ class EcosystemMetricsService:
             "users_count": 0,
             "pacientes_count": 0,
             "prontuarios_count": 0,
-            "rag_chunks_count": 0
+            "rag_chunks_count": 0,
+            "rag_chunks_embedded_count": 0
         }
         try:
             User = get_user_model()
@@ -297,28 +320,46 @@ class EcosystemMetricsService:
             from sgi.models import Paciente, Prontuario, ProntuarioChunk
             metrics["pacientes_count"] = Paciente.objects.for_system().count()
             metrics["prontuarios_count"] = Prontuario.objects.for_system().count()
-            metrics["rag_chunks_count"] = ProntuarioChunk.objects.for_system().count()
+            chunks_qs = ProntuarioChunk.objects.for_system()
+            metrics["rag_chunks_count"] = chunks_qs.count()
+            metrics["rag_chunks_embedded_count"] = chunks_qs.filter(embedding__isnull=False).count()
         except Exception as exc:
             metrics["error"] = str(exc)
         return metrics
 
     @classmethod
     def get_full_report(cls):
-        components = [
-            cls.check_traefik(),
-            cls.check_frontend(),
-            cls.check_postgres(),
-            cls.check_redis(),
-            cls.check_rabbitmq(),
-            cls.check_celery(),
-            cls.check_ollama(),
-            cls.check_vps()
+        # Paraleliza a execução das sondas independentes para máxima responsividade
+        probes = [
+            cls.check_traefik,
+            cls.check_frontend,
+            cls.check_postgres,
+            cls.check_redis,
+            cls.check_rabbitmq,
+            cls.check_celery,
+            cls.check_ollama,
+            cls.check_vps
         ]
 
+        components = []
+        with ThreadPoolExecutor(max_workers=8) as executor:
+            futures = [executor.submit(probe) for probe in probes]
+            for future in futures:
+                try:
+                    components.append(future.result())
+                except Exception as exc:
+                    components.append({
+                        "name": "Componente Desconhecido",
+                        "category": "system",
+                        "status": "error",
+                        "latency_ms": 0,
+                        "details": {"error": str(exc)}
+                    })
+
         total = len(components)
-        ok_count = sum(1 for c in components if c["status"] == "ok")
-        warning_count = sum(1 for c in components if c["status"] == "warning")
-        error_count = sum(1 for c in components if c["status"] == "error")
+        ok_count = sum(1 for c in components if c.get("status") == "ok")
+        warning_count = sum(1 for c in components if c.get("status") == "warning")
+        error_count = sum(1 for c in components if c.get("status") == "error")
 
         overall_status = "healthy"
         if error_count > 0:
@@ -335,7 +376,7 @@ class EcosystemMetricsService:
                 "healthy_count": ok_count,
                 "warning_count": warning_count,
                 "error_count": error_count,
-                "score_percent": round((ok_count / total) * 100, 1)
+                "score_percent": round((ok_count / total) * 100, 1) if total else 0
             },
             "components": components,
             "business": cls.check_business_data()
