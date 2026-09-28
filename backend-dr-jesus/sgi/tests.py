@@ -596,6 +596,30 @@ class HermesSREEndpointTestCase(TestCase):
         self.assertIsNotNone(log)
 
 
+class HermesSREPeriodicTaskTestCase(TestCase):
+    """
+    Testes Automatizados para a Patrulha Periódica Autônoma do Hermes Agent no Celery Beat (Fase 4).
+    """
+    def test_hermes_sre_periodic_task_executes_cleanly(self):
+        """A patrulha do Hermes SRE executa e consolida a telemetria dos 9 guardiões com sucesso."""
+        from sgi.tasks import patrulha_autonoma_hermes_sre_task
+        resultado = patrulha_autonoma_hermes_sre_task()
+        self.assertEqual(resultado["status"], "ok")
+        self.assertIn("score_saude", resultado)
+        self.assertIn("status_geral", resultado)
+        self.assertIn("alerta_disparado", resultado)
+        self.assertEqual(resultado["guardioes_auditados"], 9)
+
+    def test_hermes_sre_task_is_registered_in_celery_beat_schedule(self):
+        """Garante que a patrulha periódica de 6h do Hermes SRE está registrada no CELERY_BEAT_SCHEDULE."""
+        from django.conf import settings
+        schedule = getattr(settings, "CELERY_BEAT_SCHEDULE", {})
+        self.assertIn("patrulha-autonoma-hermes-sre-a-cada-6-horas", schedule)
+        entry = schedule["patrulha-autonoma-hermes-sre-a-cada-6-horas"]
+        self.assertEqual(entry["task"], "sgi.tasks.patrulha_autonoma_hermes_sre_task")
+
+
+
 
 
 

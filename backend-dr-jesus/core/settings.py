@@ -352,7 +352,12 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'sgi.tasks.verificar_integridade_hashes_anexos_task',
         'schedule': crontab(day_of_week=0, hour=2, minute=0),  # Todo domingo às 02:00 UTC
     },
+    'patrulha-autonoma-hermes-sre-a-cada-6-horas': {
+        'task': 'sgi.tasks.patrulha_autonoma_hermes_sre_task',
+        'schedule': crontab(hour='*/6', minute=0),  # A cada 6 horas (00:00, 06:00, 12:00, 18:00 UTC)
+    },
 }
+
 
 # --- SCSI: Otimizações de Testes Unitários e End-to-End ---
 if 'test' in sys.argv:

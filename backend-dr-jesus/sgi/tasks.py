@@ -1,5 +1,7 @@
+import os
 import logging
 from celery import shared_task
+
 
 logger = logging.getLogger(__name__)
 
@@ -138,3 +140,86 @@ def verificar_integridade_hashes_anexos_task():
         "divergentes": divergentes,
         "ausentes": ausentes
     }
+
+
+@shared_task(name="sgi.tasks.patrulha_autonoma_hermes_sre_task")
+def patrulha_autonoma_hermes_sre_task():
+    """
+    Patrulha Periódica Autônoma do Hermes Agent (Nous Research) — Fase 4.
+    Executada a cada 6 horas via Celery Beat.
+    Audita todos os 10 guardiões de container e dispara alertas proativos caso
+    seja detectada qualquer anomalia crítica ou degradação de SLA.
+    """
+    from sgi.ai.hermes_sre import executar_diagnostico_hermes
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from sgi.models import AuditLog
+
+    logger.info("[Hermes SRE Patrol] Iniciando patrulha periódica autônoma do cluster...")
+    resultado = executar_diagnostico_hermes(
+        comando="Patrulha periódica autônoma de SRE",
+        modo="full"
+    )
+
+    status_geral = resultado.get("status_geral", "OPERACIONAL")
+    score_saude = resultado.get("score_saude", 100)
+    recomendacoes = resultado.get("recomendacoes", [])
+    sintese = resultado.get("sintese_executiva", "")
+    alerta_disparado = False
+
+    # Dispara alerta ativo se houver degradação de saúde ou status de atenção
+    if status_geral != "OPERACIONAL" or score_saude < 80:
+        alerta_disparado = True
+        logger.warning(
+            f"[Hermes SRE Alerta] Degradação detectada! Status: {status_geral} | Score: {score_saude}%"
+        )
+
+        destinatario = os.environ.get("ALERT_EMAIL_RECIPIENT", "admin@singulariconsult.com.br")
+        assunto = f"[ALERTA HERMES SRE] Anomalia detectada no cluster ({status_geral} - Score: {score_saude}%)"
+        corpo = (
+            f"Prezada equipe de Engenharia e SRE,\n\n"
+            f"O Hermes Agent (Nous Research) detectou uma anomalia durante a patrulha periódica:\n\n"
+            f"{sintese}\n\n"
+            f"Acesse o Mission Control Dashboard para aplicar as recomendações (Human-in-the-Loop):\n"
+            f"https://api.singulariconsult.com.br/dashboard/\n\n"
+            f"--\n"
+            f"Hermes Agent SRE • SGI Fundação Dr. Jesus • Padrão SCSI PycoderBR"
+        )
+
+        try:
+            send_mail(
+                subject=assunto,
+                message=corpo,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario],
+                fail_silently=True
+            )
+            logger.info(f"[Hermes SRE Alerta] E-mail de incidente despachado para {destinatario}.")
+        except Exception as exc:
+            logger.error(f"[Hermes SRE Alerta] Falha ao despachar e-mail de alerta: {exc}")
+
+        # Registra o incidente na trilha forense do AuditLog
+        try:
+            AuditLog.registrar(
+                usuario=None,
+                acao=AuditLog.AcaoChoices.EXPORT,
+                recurso="HermesSREAlert",
+                recurso_id="auto-patrol-incident",
+                detalhes={
+                    "alerta": "INCIDENTE_SRE_CLUSTER",
+                    "score_saude": score_saude,
+                    "status_geral": status_geral,
+                    "recomendacoes": recomendacoes
+                }
+            )
+        except Exception as exc:
+            logger.warning(f"[Hermes SRE Alerta] Falha ao registrar log de incidente: {exc}")
+
+    return {
+        "status": "ok",
+        "score_saude": score_saude,
+        "status_geral": status_geral,
+        "alerta_disparado": alerta_disparado,
+        "guardioes_auditados": len(resultado.get("telemetria", {}))
+    }
+
