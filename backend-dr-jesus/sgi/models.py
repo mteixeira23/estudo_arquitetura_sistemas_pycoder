@@ -83,6 +83,14 @@ class BaseModel(models.Model):
         self.deleted_by = user
         self.save(update_fields=['is_deleted', 'deleted_at', 'deleted_by', 'updated_at'])
 
+    def delete(self, using=None, keep_parents=False):
+        """
+        Sobrescreve delete() do Django para impedir exclusão física acidental.
+        Garante conformidade com a guarda hospitalar de 20 anos (Lei Federal nº 13.787/2018).
+        """
+        self.soft_delete()
+        return (1, {self._meta.label: 1})
+
     def restore(self):
         """Restaura o registro excluído logicamente."""
         self.is_deleted = False

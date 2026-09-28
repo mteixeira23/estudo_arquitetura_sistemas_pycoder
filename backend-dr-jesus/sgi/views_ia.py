@@ -123,6 +123,16 @@ class ChatGeralStreamIAView(APIView):
             )
 
         logger.info(f"[IA Streaming] Usuário {request.user} iniciou chat geral com a IA")
+        # Rastreabilidade LGPD: auditoria da consulta de chat geral
+        from .models import AuditLog
+        AuditLog.registrar(
+            usuario=request.user,
+            acao=AuditLog.AcaoChoices.IA_QUERY,
+            recurso="ChatGeral",
+            detalhes={"tipo": "streaming_chat_geral", "prompt": str(prompt).strip()[:200]},
+            request=request
+        )
+
         gerador = gerar_stream_chat_geral(prompt=str(prompt).strip(), usuario=request.user)
 
         response = StreamingHttpResponse(gerador, content_type="text/plain; charset=utf-8")
