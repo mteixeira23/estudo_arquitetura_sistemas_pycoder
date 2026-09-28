@@ -15,6 +15,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 from django.conf import settings
 from django.db import connection
+from django.core.cache import cache
 from django.contrib.auth import get_user_model
 
 
@@ -340,6 +341,15 @@ class EcosystemMetricsService:
 
     @classmethod
     def get_full_report(cls):
+        # Cache volátil de 3 segundos para proteger contra rajadas de requisições concorrentes
+        cache_key = "scsi_mission_control_metrics_cache"
+        try:
+            cached_data = cache.get(cache_key)
+            if cached_data:
+                return cached_data
+        except Exception:
+            pass
+
         # Paraleliza a execução das sondas independentes para máxima responsividade
         probes = [
             cls.check_traefik,
@@ -378,7 +388,7 @@ class EcosystemMetricsService:
         elif warning_count > 0:
             overall_status = "warning"
 
-        return {
+        report = {
             "timestamp": datetime.utcnow().isoformat() + "Z",
             "environment": "Produção (Hostinger KVM 8 / Cloudflare)",
             "overall_status": overall_status,
@@ -392,3 +402,10 @@ class EcosystemMetricsService:
             "components": components,
             "business": cls.check_business_data()
         }
+
+        try:
+            cache.set(cache_key, report, timeout=3)
+        except Exception:
+            pass
+
+        return report

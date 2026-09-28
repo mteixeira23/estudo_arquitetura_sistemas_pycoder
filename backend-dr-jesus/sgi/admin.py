@@ -10,7 +10,7 @@ from .models import (
     DocumentoAnexo
 )
 
-# Customização do Cabeçalho e Título do Django Admin
+# Customização do Cabeçalho e Título do Django Admin com Atalho para o Mission Control
 admin.site.site_header = format_html(
     '<span>SGI Fundação Dr. Jesus &nbsp;|&nbsp; '
     '<a href="/dashboard/" style="background:#0284c7; color:#fff; padding:4px 10px; border-radius:6px; text-decoration:none; font-size:12px; font-weight:bold;">'
@@ -55,7 +55,9 @@ class ProntuarioChunkAdmin(admin.ModelAdmin):
     tem_embedding.short_description = "Vetorizado (768d)"
 
     def get_queryset(self, request):
-        return ProntuarioChunk.objects.for_system()
+        if request.user.is_superuser:
+            return ProntuarioChunk.objects.for_system()
+        return ProntuarioChunk.objects.for_user(request.user)
 
 
 @admin.register(EstoqueItem)
@@ -66,8 +68,8 @@ class EstoqueItemAdmin(admin.ModelAdmin):
 
     def get_queryset(self, request):
         if request.user.is_superuser:
-            return EstoqueItem.objects.all()
-        return EstoqueItem.objects.filter(owner=request.user)
+            return EstoqueItem.objects.for_system()
+        return EstoqueItem.objects.for_user(request.user)
 
 
 @admin.register(MovimentacaoEstoque)
@@ -76,16 +78,31 @@ class MovimentacaoEstoqueAdmin(admin.ModelAdmin):
     list_filter = ('tipo', 'data')
     search_fields = ('item_nome', 'responsavel')
 
+    def get_queryset(self, request):
+        if request.user.is_superuser:
+            return MovimentacaoEstoque.objects.for_system()
+        return MovimentacaoEstoque.objects.for_user(request.user)
+
 
 @admin.register(Doacao)
 class DoacaoAdmin(admin.ModelAdmin):
-    list_display = ('doador_nome', 'tipo', 'quantidade', 'data_recebimento', 'destino')
-    list_filter = ('tipo', 'data_recebimento')
-    search_fields = ('doador_nome', 'item_descricao')
+    list_display = ('doador', 'tipo_entrada', 'item', 'quantidade', 'recibo_emitido', 'data')
+    list_filter = ('tipo_entrada', 'recibo_emitido', 'data')
+    search_fields = ('doador', 'item')
+
+    def get_queryset(self, request):
+        if request.user.is_superuser:
+            return Doacao.objects.for_system()
+        return Doacao.objects.for_user(request.user)
 
 
 @admin.register(DocumentoAnexo)
 class DocumentoAnexoAdmin(admin.ModelAdmin):
-    list_display = ('nome_original', 'tipo_mime', 'tamanho_bytes', 'processado_ia', 'owner', 'created_at')
-    list_filter = ('processado_ia', 'tipo_mime')
-    search_fields = ('nome_original',)
+    list_display = ('titulo', 'tipo_documento', 'tamanho_bytes', 'status_processamento_ia', 'owner', 'created_at')
+    list_filter = ('status_processamento_ia', 'tipo_documento')
+    search_fields = ('titulo',)
+
+    def get_queryset(self, request):
+        if request.user.is_superuser:
+            return DocumentoAnexo.objects.for_system()
+        return DocumentoAnexo.objects.for_user(request.user)

@@ -493,6 +493,16 @@ MISSION_CONTROL_HTML = """<!DOCTYPE html>
       }
     }
 
+    // Pausa auto-refresh quando aba do navegador estiver oculta e retoma ao focar
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        if (timerId) clearInterval(timerId);
+      } else {
+        loadMetrics();
+        updateRefreshTimer();
+      }
+    });
+
     // Inicialização ao carregar
     loadMetrics();
     updateRefreshTimer();
