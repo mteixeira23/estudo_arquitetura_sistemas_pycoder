@@ -368,6 +368,9 @@ services:
       - HERMES_UID=1000
       - HERMES_GID=1000
       - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_BASIC_AUTH_USERNAME=admin
+      - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=DrJesus2026!
+      - HERMES_DASHBOARD_BASIC_AUTH_SECRET=c3NzaS1oZXJtZXMtc2VjcmV0LWRyamVzdXMtMjAyNg==
       - SGI_API_BASE_URL=https://api.singulariconsult.com.br/api/v1
     volumes:
       - dr_jesus_hermes_data:/opt/data
@@ -401,7 +404,7 @@ services:
         - "traefik.http.routers.scsi-hermes.entrypoints=websecure"
         - "traefik.http.routers.scsi-hermes.tls=true"
         - "traefik.http.routers.scsi-hermes.middlewares=scsi-headers@file,scsi-compress@file"
-        - "traefik.http.services.scsi-hermes.loadbalancer.server.port=8642"
+        - "traefik.http.services.scsi-hermes.loadbalancer.server.port=9119"
 
 # ==============================================================================
 # ISOLAMENTO DE REDES EM 3 ZONAS (ZERO TRUST DE REDE)
