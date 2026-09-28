@@ -474,6 +474,80 @@ class HashIntegrityTaskTestCase(TestCase):
         self.assertEqual(resultado["divergentes"], 0)
 
 
+class HermesSREToolsTestCase(TestCase):
+    """
+    Testes Automatizados para as Ferramentas de SRE & AIOps do Hermes Agent (Fase 2).
+    """
+    def test_all_sre_guardians_execute_and_return_schema(self):
+        from sgi.ai.sre_tools import (
+            inspect_database_guardian,
+            inspect_rabbitmq_guardian,
+            inspect_redis_guardian,
+            inspect_celery_guardian,
+            inspect_traefik_guardian,
+            inspect_frontend_guardian,
+            inspect_django_guardian,
+            inspect_ollama_guardian,
+            inspect_security_guardian,
+            inspect_full_cluster_sre
+        )
+
+        # 1. Database Guardian
+        db_rep = inspect_database_guardian()
+        self.assertEqual(db_rep["guardian"], "postgres_dba_expert")
+        self.assertIn("status", db_rep)
+        self.assertIn("latency_ms", db_rep)
+
+        # 2. RabbitMQ Guardian
+        mq_rep = inspect_rabbitmq_guardian()
+        self.assertEqual(mq_rep["guardian"], "rabbitmq_expert")
+        self.assertIn("status", mq_rep)
+
+        # 3. Redis Guardian
+        redis_rep = inspect_redis_guardian()
+        self.assertEqual(redis_rep["guardian"], "redis_expert")
+        self.assertIn("status", redis_rep)
+
+        # 4. Celery Guardian
+        celery_rep = inspect_celery_guardian()
+        self.assertEqual(celery_rep["guardian"], "celery_expert")
+        self.assertIn("status", celery_rep)
+
+        # 5. Traefik Guardian
+        traefik_rep = inspect_traefik_guardian()
+        self.assertEqual(traefik_rep["guardian"], "traefik_expert")
+        self.assertIn("status", traefik_rep)
+
+        # 6. Frontend Guardian
+        front_rep = inspect_frontend_guardian()
+        self.assertEqual(front_rep["guardian"], "frontend_ux_expert")
+        self.assertIn("status", front_rep)
+
+        # 7. Django Guardian
+        django_rep = inspect_django_guardian()
+        self.assertEqual(django_rep["guardian"], "django_core_expert")
+        self.assertIn("status", django_rep)
+
+        # 8. Ollama Guardian
+        ollama_rep = inspect_ollama_guardian()
+        self.assertEqual(ollama_rep["guardian"], "ollama_ia_expert")
+        self.assertIn("status", ollama_rep)
+
+        # 9. Security Guardian
+        sec_rep = inspect_security_guardian()
+        self.assertEqual(sec_rep["guardian"], "security_compliance_expert")
+        self.assertIn("status", sec_rep)
+
+        # 10. Orquestrador Hermes SRE Full Cluster
+        full_rep = inspect_full_cluster_sre()
+        self.assertEqual(full_rep["orquestrador"], "Hermes Agent (Nous Research)")
+        self.assertEqual(full_rep["guardians_total"], 9)
+        self.assertIn("health_score", full_rep)
+        self.assertIn("summary", full_rep)
+        self.assertGreaterEqual(full_rep["health_score"], 50)
+
+
+
 
 
 
