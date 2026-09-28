@@ -268,5 +268,24 @@ class EcosystemMetricsView(APIView):
         return Response(report, status=200)
 
 
+from django.http import HttpResponse
+from django.shortcuts import redirect
+from .dashboard_html import MISSION_CONTROL_HTML
+
+
+class MissionControlDashboardView(APIView):
+    """
+    Interface Visual 'Mission Control' (Fase 2).
+    Acesso direto via navegador em /dashboard/ para administradores autenticados.
+    """
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return redirect('/admin/login/?next=/dashboard/')
+        if not (request.user.is_staff or request.user.is_superuser):
+            return HttpResponse("<h1>403 Forbidden: Acesso restrito a administradores do ecossistema SCSI</h1>", status=403)
+        return HttpResponse(MISSION_CONTROL_HTML, content_type="text/html")
+
+
+
 
 

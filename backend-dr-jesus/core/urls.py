@@ -8,9 +8,12 @@ from django.conf.urls.static import static
 from rest_framework_simplejwt.views import TokenObtainPairView
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
-from sgi.views import CookieTokenRefreshView
+from sgi.views import CookieTokenRefreshView, MissionControlDashboardView
 
 urlpatterns = [
+    # Mission Control — Cockpit Unificado do Ecossistema (Fase 2)
+    path('dashboard/', MissionControlDashboardView.as_view(), name='mission_control'),
+
     path('admin/', admin.site.urls),
 
     # Endpoints de Autenticação Soberana (Substitutos do Supabase Auth)
