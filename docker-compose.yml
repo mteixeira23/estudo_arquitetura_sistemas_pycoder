@@ -99,8 +99,91 @@ services:
         - "traefik.http.routers.scsi-caravana.rule=Host(`caravana.singulariconsult.com.br`)"
         - "traefik.http.routers.scsi-caravana.entrypoints=websecure"
         - "traefik.http.routers.scsi-caravana.tls=true"
+        - "traefik.http.routers.scsi-caravana.priority=10"
         - "traefik.http.routers.scsi-caravana.middlewares=scsi-headers@file,scsi-compress@file"
         - "traefik.http.services.scsi-caravana.loadbalancer.server.port=80"
+
+  # ----------------------------------------------------------------------------
+  # 1.2 CARAVANA POSTGREST: REST API Engine nativo compatível com Supabase
+  # ----------------------------------------------------------------------------
+  caravana_postgrest:
+    image: postgrest/postgrest:v12.2.0
+    environment:
+      PGRST_DB_URI: "postgres://authenticator:caravana_authenticator_pass@db:5432/caravana_db"
+      PGRST_DB_SCHEMAS: "public"
+      PGRST_DB_ANON_ROLE: "anon"
+      PGRST_JWT_SECRET: "caravana-secret-jwt-key-32-chars-long-min-len-pycoder"
+      PGRST_DB_POOL: "10"
+      PGRST_DB_EXTRA_SEARCH_PATH: "public,auth"
+      PGRST_SERVER_PORT: "3000"
+    networks:
+      - scsi_public
+      - scsi_data
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.scsi-caravana-rest.rule=Host(`caravana.singulariconsult.com.br`) && PathPrefix(`/rest/v1`)"
+        - "traefik.http.routers.scsi-caravana-rest.entrypoints=websecure"
+        - "traefik.http.routers.scsi-caravana-rest.tls=true"
+        - "traefik.http.routers.scsi-caravana-rest.priority=100"
+        - "traefik.http.routers.scsi-caravana-rest.middlewares=scsi-caravana-strip-rest@docker,scsi-headers@file,scsi-compress@file"
+        - "traefik.http.middlewares.scsi-caravana-strip-rest.stripprefix.prefixes=/rest/v1"
+        - "traefik.http.services.scsi-caravana-rest.loadbalancer.server.port=3000"
+
+  # ----------------------------------------------------------------------------
+  # 1.3 CARAVANA AUTH: GoTrue Auth Engine compatível com Supabase Auth v1
+  # ----------------------------------------------------------------------------
+  caravana_auth:
+    image: supabase/gotrue:v2.158.1
+    environment:
+      GOTRUE_JWT_SECRET: "caravana-secret-jwt-key-32-chars-long-min-len-pycoder"
+      GOTRUE_JWT_EXP: "3600"
+      GOTRUE_DB_DATABASE_URL: "postgres://authenticator:caravana_authenticator_pass@db:5432/caravana_db"
+      GOTRUE_SITE_URL: "https://caravana.singulariconsult.com.br"
+      GOTRUE_URI_ALLOW_LIST: "https://caravana.singulariconsult.com.br*"
+      GOTRUE_DISABLE_SIGNUP: "false"
+      API_EXTERNAL_URL: "https://caravana.singulariconsult.com.br/auth/v1"
+      GOTRUE_API_HOST: "0.0.0.0"
+      PORT: "9999"
+    networks:
+      - scsi_public
+      - scsi_data
+    deploy:
+      mode: replicated
+      replicas: 1
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+      resources:
+        limits:
+          cpus: "0.30"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.scsi-caravana-auth.rule=Host(`caravana.singulariconsult.com.br`) && PathPrefix(`/auth/v1`)"
+        - "traefik.http.routers.scsi-caravana-auth.entrypoints=websecure"
+        - "traefik.http.routers.scsi-caravana-auth.tls=true"
+        - "traefik.http.routers.scsi-caravana-auth.priority=100"
+        - "traefik.http.routers.scsi-caravana-auth.middlewares=scsi-caravana-strip-auth@docker,scsi-headers@file,scsi-compress@file"
+        - "traefik.http.middlewares.scsi-caravana-strip-auth.stripprefix.prefixes=/auth/v1"
+        - "traefik.http.services.scsi-caravana-auth.loadbalancer.server.port=9999"
 
   # ----------------------------------------------------------------------------
   # 2. BACKEND: Django ASGI (Daphne) — REST API, WebSockets e Streaming SSE
