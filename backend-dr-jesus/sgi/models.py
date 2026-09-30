@@ -144,6 +144,16 @@ class Prontuario(BaseModel):
     observacoes_clinicas = models.TextField(help_text="Anotações do acolhimento/reabilitação.")
     data_entrada = models.DateField(auto_now_add=True)
     ativo = models.BooleanField(default=True)
+    hash_integridade = models.CharField(max_length=64, blank=True, null=True, help_text="Hash SHA-256 probatório (CFM 1.821 / Lei 13.787)")
+    assinado_digitalmente = models.BooleanField(default=False, help_text="Imutabilidade legal após assinatura digital médica")
+
+    def clean(self):
+        super().clean()
+        if self.pk:
+            original = Prontuario.objects.filter(pk=self.pk).first()
+            if original and original.assinado_digitalmente and original.observacoes_clinicas != self.observacoes_clinicas:
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Violação de Imutabilidade: Prontuário médico digital assinado não pode ser alterado. Emita termo de aditamento/errata.")
 
     def __str__(self):
         return f"Prontuário de {self.paciente.nome_completo}"
@@ -151,11 +161,21 @@ class Prontuario(BaseModel):
 class ProntuarioChunk(BaseModel):
     """
     Preparação para Fase 4 (RAG / Embeddings Ollama).
-    Fatia observações clínicas para busca vetorial de alta precisão.
+    Fatia observações clínicas para busca vetorial de alta precisão com controle de sigilo LGPD.
     """
     prontuario = models.ForeignKey(Prontuario, on_delete=models.CASCADE, related_name="chunks")
     documento_anexo = models.ForeignKey('DocumentoAnexo', on_delete=models.SET_NULL, null=True, blank=True, related_name="chunks_vetoriais")
     texto_chunk = models.TextField()
+    nivel_sigilo = models.CharField(
+        max_length=50,
+        default="RESTRITO_EQUIPE",
+        choices=[
+            ("PUBLICO_INTERNO", "Público Interno"),
+            ("RESTRITO_EQUIPE", "Restrito Equipe Multidisciplinar"),
+            ("ART11_SENSIVEL", "Art. 11 LGPD - Altamente Sensível (Sorologia/Saúde Mental)"),
+        ],
+        help_text="Filtro estrito para injeção de contexto no RAG e prevenção de vazamento de dados sensíveis"
+    )
     # Fase 4.2: Embeddings semânticos gerados pelo modelo nomic-embed-text (768 dimensões)
     embedding = VectorField(dimensions=768, null=True, blank=True)
 
@@ -282,6 +302,7 @@ class AuditLog(models.Model):
         SOFT_DELETE = "SOFT_DELETE", "Exclusão Lógica (Soft Delete)"
         IA_QUERY = "IA_QUERY", "Consulta Cognitiva / RAG IA"
         EXPORT = "EXPORT", "Exportação de Dados Clínicos"
+        ACCESS_DENIED = "ACCESS_DENIED", "Acesso Negado / Violação RBAC ou Governança"
 
     id = models.UUIDField(primary_key=True, default=uuid6.uuid7, editable=False)
     usuario = models.ForeignKey(

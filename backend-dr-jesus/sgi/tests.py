@@ -754,13 +754,14 @@ class SGISafetyGuardsTestCase(TestCase):
         from sgi.models import AuditLog
         AuditLog.registrar(
             usuario=self.monitor,
-            acao=AuditLog.AcaoChoices.ACCESS_DENIED if hasattr(AuditLog.AcaoChoices, "ACCESS_DENIED") else AuditLog.AcaoChoices.VIEW,
+            acao=AuditLog.AcaoChoices.ACCESS_DENIED,
             recurso="Prontuario",
             recurso_id=str(self.prontuario.id),
             detalhes={"resultado": "BLOQUEIO_RBAC_403"}
         )
         log = AuditLog.objects.filter(usuario=self.monitor, recurso="Prontuario").first()
         self.assertIsNotNone(log)
+        self.assertEqual(log.acao, AuditLog.AcaoChoices.ACCESS_DENIED)
 
     def test_trava_fefo_baixa_alimentos_bloqueia_lote_recente_se_houver_vencimento_proximo(self):
         """RF-M05-04: Norma sanitária FEFO (First-Expired, First-Out) - baixa obriga priorizar vencimento mais curto."""
@@ -839,12 +840,29 @@ class SGISafetyGuardsTestCase(TestCase):
         with self.assertRaises(PermissionError):
             tentar_editar_evolucao(evolucao_registrada, "Texto adulterado sem autorização")
 
+    def test_clean_model_prontuario_bloqueia_edicao_quando_assinado(self):
+        """RF-M08-05: Validação do clean() no ORM impedindo alteração em prontuário assinado."""
+        from django.core.exceptions import ValidationError
+        
+        # Simula objeto persistido assinado
+        p = Prontuario.objects.create(
+            paciente=self.paciente,
+            observacoes_clinicas="Observação clínica original assinada.",
+            assinado_digitalmente=True,
+            hash_integridade="a" * 64
+        )
+        
+        # Alterar o texto e rodar clean() deve disparar ValidationError
+        p.observacoes_clinicas = "Tentativa de alteração não autorizada após assinatura."
+        with self.assertRaises(ValidationError):
+            p.clean()
 
-
-
-
-
-
-
-
-
+    def test_prontuario_chunk_possui_metatag_nivel_sigilo_lgpd(self):
+        """RF-M08-06: Metatag de sigilo LGPD no ProntuarioChunk para filtragem no RAG soberano."""
+        chunk = ProntuarioChunk(
+            prontuario=self.prontuario,
+            texto_chunk="Sorologia HIV/Sífilis: Não reagente.",
+            nivel_sigilo="ART11_SENSIVEL"
+        )
+        self.assertEqual(chunk.nivel_sigilo, "ART11_SENSIVEL")
+        self.assertIn("ART11_SENSIVEL", [choice[0] for choice in chunk._meta.get_field("nivel_sigilo").choices])
