@@ -1,20 +1,20 @@
 import os
 import logging
-from typing import List
+from typing import List, Optional
 from langchain_ollama import ChatOllama, OllamaEmbeddings
 
 logger = logging.getLogger(__name__)
 
-OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL", "http://localhost:11434")
-OLLAMA_LLM_MODEL = os.environ.get("OLLAMA_LLM_MODEL", "llama3.2")
+OLLAMA_BASE_URL = os.environ.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_HOST") or "http://ollama:11434"
+OLLAMA_LLM_MODEL = os.environ.get("OLLAMA_LLM_MODEL", "llama3.2:3b")
 OLLAMA_EMBED_MODEL = os.environ.get("OLLAMA_EMBED_MODEL", "nomic-embed-text")
 
-def get_llm(temperature: float = 0.2, streaming: bool = False) -> ChatOllama:
+def get_llm(model: Optional[str] = None, temperature: float = 0.2, streaming: bool = False) -> ChatOllama:
     """
     Retorna uma instância configurada do ChatOllama (Llama 3.2).
     """
     return ChatOllama(
-        model=OLLAMA_LLM_MODEL,
+        model=model or OLLAMA_LLM_MODEL,
         base_url=OLLAMA_BASE_URL,
         temperature=temperature,
         streaming=streaming,
