@@ -139,7 +139,7 @@ services:
         - "traefik.http.routers.scsi-caravana-rest.entrypoints=websecure"
         - "traefik.http.routers.scsi-caravana-rest.tls=true"
         - "traefik.http.routers.scsi-caravana-rest.priority=100"
-        - "traefik.http.routers.scsi-caravana-rest.middlewares=scsi-caravana-strip-rest@docker,scsi-headers@file,scsi-compress@file"
+        - "traefik.http.routers.scsi-caravana-rest.middlewares=scsi-caravana-strip-rest@swarm,scsi-headers@file,scsi-compress@file"
         - "traefik.http.middlewares.scsi-caravana-strip-rest.stripprefix.prefixes=/rest/v1"
         - "traefik.http.services.scsi-caravana-rest.loadbalancer.server.port=3000"
 
@@ -181,7 +181,7 @@ services:
         - "traefik.http.routers.scsi-caravana-auth.entrypoints=websecure"
         - "traefik.http.routers.scsi-caravana-auth.tls=true"
         - "traefik.http.routers.scsi-caravana-auth.priority=100"
-        - "traefik.http.routers.scsi-caravana-auth.middlewares=scsi-caravana-strip-auth@docker,scsi-headers@file,scsi-compress@file"
+        - "traefik.http.routers.scsi-caravana-auth.middlewares=scsi-caravana-strip-auth@swarm,scsi-headers@file,scsi-compress@file"
         - "traefik.http.middlewares.scsi-caravana-strip-auth.stripprefix.prefixes=/auth/v1"
         - "traefik.http.services.scsi-caravana-auth.loadbalancer.server.port=9999"
 
