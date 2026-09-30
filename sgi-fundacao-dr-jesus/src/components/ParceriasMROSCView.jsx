@@ -577,14 +577,32 @@ export default function ParceriasMROSCView({ termosMROSC = [], transacoes = [], 
     }
   ]);
 
-  // FASE 5: Certidões Negativas CND
-  const [certidoesCND] = useState([
+  // FASE 5: Certidões Negativas CND & Trava P0 (RF-M11-02)
+  const [certidoesCND, setCertidoesCND] = useState([
     { id: 'CND-01', documento: 'CND Federal (Tributos Federais e Dívida Ativa da União)', orgao: 'Receita Federal / PGFN', validade: '2026-11-15', diasRestantes: 90, codigoAutenticidade: 'RFB.9920.1049.8810.4920', status: 'Válida & Regular' },
     { id: 'CND-02', documento: 'CRF FGTS (Certificado de Regularidade do FGTS)', orgao: 'Caixa Econômica Federal', validade: '2026-10-30', diasRestantes: 74, codigoAutenticidade: 'CEF.2026.8492.0104.9921', status: 'Válida & Regular' },
     { id: 'CND-03', documento: 'CNDT Trabalhista (Débitos Trabalhistas - TST)', orgao: 'Tribunal Superior do Trabalho', validade: '2026-12-05', diasRestantes: 110, codigoAutenticidade: 'TST.9820.4910.2940.1094', status: 'Válida & Regular' },
     { id: 'CND-04', documento: 'CND Estadual SEFAZ-BA (Tributos Estaduais)', orgao: 'Secretaria da Fazenda da Bahia', validade: '2026-11-20', diasRestantes: 95, codigoAutenticidade: 'SEFAZ.BA.2026.0491.0294', status: 'Válida & Regular' },
     { id: 'CND-05', documento: 'CND Municipal PMC (Prefeitura de Candeias)', orgao: 'Prefeitura Municipal de Candeias', validade: '2026-12-10', diasRestantes: 115, codigoAutenticidade: 'PMC.CANDEIAS.2026.8810.49', status: 'Válida & Regular' }
   ]);
+
+  const hasCNDVencida = useMemo(() => {
+    return certidoesCND.some(c => c.status.includes('Vencida') || c.status.includes('Irregular') || c.diasRestantes <= 0);
+  }, [certidoesCND]);
+
+  const toggleSimularCNDVencida = (cndId) => {
+    setCertidoesCND(prev => prev.map(c => {
+      if (c.id === cndId) {
+        const isCurrentVencida = c.status.includes('Vencida');
+        return {
+          ...c,
+          status: isCurrentVencida ? 'Válida & Regular' : 'Vencida (Irregular)',
+          diasRestantes: isCurrentVencida ? 90 : -5
+        };
+      }
+      return c;
+    }));
+  };
 
   // Form State for New Purchase Request (SC)
   const [newSC, setNewSC] = useState({
@@ -1422,6 +1440,41 @@ export default function ParceriasMROSCView({ termosMROSC = [], transacoes = [], 
             </div>
           </div>
 
+          {/* BANNER DE TRAVA IMPEDITIVA REGULATÓRIA P0 - CND VENCIDA */}
+          {hasCNDVencida && (
+            <div style={{ background: '#fef2f2', border: '2px solid #ef4444', padding: '1rem', borderRadius: '8px', color: '#991b1b', display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+              <ShieldAlert size={28} style={{ color: '#ef4444', flexShrink: 0, marginTop: '2px' }} />
+              <div>
+                <div style={{ fontWeight: 800, fontSize: '0.95rem' }}>
+                  ⛔ HOMOLOGAÇÃO & CONTRATAÇÃO BLOQUEADAS: CND VENCIDA OU IRREGULAR DETECTADA
+                </div>
+                <div style={{ fontSize: '0.825rem', marginTop: '4px', lineHeight: '1.4' }}>
+                  Em observância ao <strong>Art. 34 da Lei Federal nº 13.019/2014</strong> e resoluções do TCE-BA, a homologação de novas cotações e a emissão de Ordens de Fornecimento estão <strong>suspensas</strong> até a regularização da certidão em atraso na aba "5. Auditoria & Dossiê".
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CARD SENTINELA DE ANTIFRACIONAMENTO EM 90 DIAS (RF-M11-03) */}
+          <div className="card" style={{ background: '#f8fafc', borderLeft: '4px solid #3b82f6', padding: '0.85rem 1rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Scale size={18} style={{ color: '#2563eb' }} />
+                <div>
+                  <span style={{ fontWeight: 800, fontSize: '0.85rem', color: '#1e3a8a' }}>
+                    Sentinela Antifracioneamento de Despesa em 90 Dias (Lei 14.133 / MROSC)
+                  </span>
+                  <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                    Acumulado últimos 90 dias: <strong>R$ 38.450,00</strong> / Limite de dispensa direta sem 3 cotações: <strong>R$ 50.000,00</strong> (76,9% consumido)
+                  </div>
+                </div>
+              </div>
+              <span className="badge badge-success" style={{ fontSize: '0.7rem' }}>
+                ✓ Regular (Dentro do Limite Legal)
+              </span>
+            </div>
+          </div>
+
           <div className="card">
             <h4 style={{ fontSize: '1rem', color: 'var(--text-main)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <ShieldCheck size={18} style={{ color: '#d97706' }} />
@@ -1518,22 +1571,61 @@ export default function ParceriasMROSCView({ termosMROSC = [], transacoes = [], 
                     <th>Prazo Restante</th>
                     <th>Código de Autenticidade</th>
                     <th>Status da Certidão</th>
+                    <th>Ação de Auditoria</th>
                   </tr>
                 </thead>
                 <tbody>
                   {certidoesCND.map(c => (
-                    <tr key={c.id}>
+                    <tr key={c.id} style={{ background: c.status.includes('Vencida') ? '#fef2f2' : 'transparent' }}>
                       <td><span className="badge badge-primary">{c.id}</span></td>
-                      <td style={{ fontWeight: 700, color: 'var(--text-main)' }}>{c.documento}</td>
+                      <td style={{ fontWeight: 700, color: c.status.includes('Vencida') ? '#dc2626' : 'var(--text-main)' }}>{c.documento}</td>
                       <td style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{c.orgao}</td>
-                      <td style={{ fontWeight: 700, color: '#059669' }}>{c.validade}</td>
-                      <td style={{ fontSize: '0.8rem', fontWeight: 600, color: '#2563eb' }}>{c.diasRestantes} dias restantes</td>
+                      <td style={{ fontWeight: 700, color: c.status.includes('Vencida') ? '#dc2626' : '#059669' }}>{c.validade}</td>
+                      <td style={{ fontSize: '0.8rem', fontWeight: 600, color: c.diasRestantes <= 0 ? '#dc2626' : '#2563eb' }}>
+                        {c.diasRestantes <= 0 ? 'VENCIDA (0 dias)' : `${c.diasRestantes} dias restantes`}
+                      </td>
                       <td style={{ fontSize: '0.75rem', fontFamily: 'monospace' }}>{c.codigoAutenticidade}</td>
-                      <td><span className="badge badge-success"><CheckCircle2 size={11} /> {c.status}</span></td>
+                      <td>
+                        <span className={`badge ${c.status.includes('Vencida') ? 'badge-danger' : 'badge-success'}`}>
+                          {c.status.includes('Vencida') ? <ShieldAlert size={11} /> : <CheckCircle2 size={11} />} {c.status}
+                        </span>
+                      </td>
+                      <td>
+                        <button 
+                          className="btn btn-sm" 
+                          onClick={() => toggleSimularCNDVencida(c.id)}
+                          style={{
+                            fontSize: '0.7rem',
+                            padding: '3px 8px',
+                            background: c.status.includes('Vencida') ? '#10b981' : '#f59e0b',
+                            color: '#ffffff',
+                            fontWeight: 700
+                          }}
+                          title="Alternar status para testar a trava regulatória P0 do MROSC"
+                        >
+                          {c.status.includes('Vencida') ? '✓ Regularizar CND' : '⚠️ Simular Vencida'}
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+
+            {/* AVISO DO IMPACTO DA TRAVA REGULATÓRIA P0 */}
+            <div style={{ marginTop: '1rem', background: hasCNDVencida ? '#fef2f2' : '#f0fdf4', border: `1px solid ${hasCNDVencida ? '#ef4444' : '#86efac'}`, padding: '0.85rem', borderRadius: '8px', color: hasCNDVencida ? '#991b1b' : '#166534', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              {hasCNDVencida ? <ShieldAlert size={22} style={{ color: '#ef4444', flexShrink: 0 }} /> : <ShieldCheck size={22} style={{ color: '#16a34a', flexShrink: 0 }} />}
+              <div style={{ fontSize: '0.825rem' }}>
+                {hasCNDVencida ? (
+                  <>
+                    <strong>⛔ TRAVA IMPEDITIVA REGULATÓRIA ATIVA (RF-M11-02 / LEI 13.019/2014 & TCE-BA)</strong>: Foi detectada certidão vencida ou irregular. Todas as homologações de cotações, emissões de ordem de fornecimento e liquidações bancárias de despesas estão <strong>automaticamente BLOQUEADAS</strong> até que a certidão seja renovada.
+                  </>
+                ) : (
+                  <>
+                    <strong>✓ Regularidade Fiscal e Trabalhista Plena (100% Homologada)</strong>: Todas as 5 Certidões Negativas da Fundação Dr. Jesus estão vigentes junto à Receita Federal, Caixa (FGTS), TST, SEFAZ-BA e Prefeitura de Candeias. Compras e repasses autorizados.
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

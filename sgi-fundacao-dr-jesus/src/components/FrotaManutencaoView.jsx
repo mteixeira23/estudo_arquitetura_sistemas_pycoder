@@ -36,6 +36,7 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
   const [checkingVeiculo, setCheckingVeiculo] = useState(null);
   const [checklistItems, setChecklistItems] = useState({
     pneus: true,
+    tacografo: true,
     oleoAgua: true,
     freios: true,
     documentacao: true,
@@ -160,12 +161,30 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
     e.preventDefault();
     if (!checkingVeiculo) return;
 
-    const allPassed = Object.values(checklistItems).every(val => val === true);
     const todayStr = new Date().toLocaleDateString('pt-BR').slice(0, 5);
 
+    // TRAVA REGULATÓRIA P0 - SEGURANÇA VEICULAR (CTB ART. 230 & PORTARIA INMETRO TACÓGRAFO)
+    if (!checklistItems.pneus || !checklistItems.tacografo) {
+      alert(`⛔ TRAVA DE SEGURANÇA VEICULAR P0 (CTB ART. 230 / INMETRO):\n\nO veículo ${checkingVeiculo.placa} NÃO PODE SER LIBERADO PARA VIAGEM.\n${!checklistItems.pneus ? '• Sulco dos pneus abaixo do limite legal TWI (1,6 mm) — Risco grave de aquaplanagem/estouro.\n' : ''}${!checklistItems.tacografo ? '• Cronotacógrafo Inmetro vencido (> 2 anos) ou sem certificado válido.\n' : ''}\nO veículo foi classificado como "Bloqueado por Segurança" e uma Ordem de Serviço foi sinalizada para a Oficina.`);
+      
+      setVeiculos(prev => prev.map(v => v.id === checkingVeiculo.id ? { 
+        ...v, 
+        checklist: `⛔ Reprovado TWI/Tacógrafo (${todayStr})`,
+        status: 'Bloqueado por Segurança (Oficina)'
+      } : v));
+      setShowChecklistModal(false);
+      setCheckingVeiculo(null);
+      return;
+    }
+
+    const allPassed = Object.values(checklistItems).every(val => val === true);
     const updatedStatus = allPassed ? `Aprovado (${todayStr})` : `Atenção (Itens Pendentes ${todayStr})`;
 
-    setVeiculos(prev => prev.map(v => v.id === checkingVeiculo.id ? { ...v, checklist: updatedStatus } : v));
+    setVeiculos(prev => prev.map(v => v.id === checkingVeiculo.id ? { 
+      ...v, 
+      checklist: updatedStatus,
+      status: allPassed ? 'Disponível' : v.status
+    } : v));
     setShowChecklistModal(false);
     setCheckingVeiculo(null);
   };
@@ -982,7 +1001,16 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
                     checked={checklistItems.pneus} 
                     onChange={e => setChecklistItems({ ...checklistItems, pneus: e.target.checked })} 
                   />
-                  🛞 Pneus, Calibragem & Estepe de Emergência
+                  🛞 Pneus com Sulco Superior a 1,6 mm (TWI / CTB Art. 230) & Estepe
+                </label>
+
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>
+                  <input 
+                    type="checkbox" 
+                    checked={checklistItems.tacografo} 
+                    onChange={e => setChecklistItems({ ...checklistItems, tacografo: e.target.checked })} 
+                  />
+                  ⏱️ Aferição Cronotacógrafo Inmetro Válida (&lt; 2 anos) & Seguro APP
                 </label>
 
                 <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', fontWeight: 600, cursor: 'pointer' }}>

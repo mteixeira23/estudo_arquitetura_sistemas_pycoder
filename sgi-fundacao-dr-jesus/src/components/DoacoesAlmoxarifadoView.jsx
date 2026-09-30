@@ -622,6 +622,23 @@ export default function DoacoesAlmoxarifadoView({ activeSubTab, setActiveSubTab 
       return;
     }
 
+    // TRAVA REGULATÓRIA P0 - FEFO ALIMENTOS (FIRST-EXPIRED, FIRST-OUT / RDC 216 ANVISA)
+    if (targetItem.categoria === 'Alimentos' && targetItem.validade) {
+      const loteMaisProximo = estoque.find(other => 
+        other.categoria === 'Alimentos' && 
+        other.item.trim().toLowerCase() === targetItem.item.trim().toLowerCase() && 
+        other.id !== targetItem.id && 
+        other.qtdAtual > 0 && 
+        other.validade && 
+        new Date(other.validade) < new Date(targetItem.validade)
+      );
+
+      if (loteMaisProximo) {
+        alert(`⛔ TRAVA SANITÁRIA P0 - PROTOCOLO FEFO ATIVO (RDC 216 ANVISA):\n\nOperação Bloqueada! Tentativa de saída do lote com validade em ${targetItem.validade}.\n\nExiste lote ativo com vencimento mais próximo no Galpão A:\n• Item: ${loteMaisProximo.item} (${loteMaisProximo.id})\n• Validade: ${loteMaisProximo.validade}\n• Saldo Disponível: ${loteMaisProximo.qtdAtual} ${loteMaisProximo.unidade}\n\nPela diretriz sanitária FEFO, os lotes com vencimento mais curto DEVEM ser consumidos prioritariamente.`);
+        return;
+      }
+    }
+
     const saldoAnt = targetItem.qtdAtual;
     const saldoNov = saldoAnt - qtdNum;
 

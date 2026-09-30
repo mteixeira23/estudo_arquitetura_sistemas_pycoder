@@ -3825,8 +3825,13 @@ export default function FinanceiroView({
 
             <form onSubmit={(e) => {
               e.preventDefault();
-              alert('Nota Fiscal e Ordem de Pagamento registradas com sucesso e carimbadas pelo sistema MROSC!');
+              if (newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO') || newNFe.formaPagamento.includes('ESPÉCIE')) {
+                alert('⛔ BLOQUEIO IMPEDITIVO REGULATÓRIO (ART. 53 DA LEI 13.019/2014 & TCE-BA):\n\nÉ estritamente vedada a emissão de cheques ou pagamentos em dinheiro em espécie com recursos de Termos de Fomento/Colaboração MROSC.\nToda liquidação deve ser realizada exclusivamente por transferência eletrônica identificada na conta bancária do credor favorecido.');
+                return;
+              }
+              handleCreateNFeLiquidation(e);
               setShowNFeModal(false);
+              alert('✓ Nota Fiscal e Ordem de Pagamento liquidadas com sucesso em Conta Bancária Segregada, com Carimbo Eletrônico MROSC (Lei 13.019/2014) e chancela no REF!');
             }} style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               
               <div style={{ background: '#eff6ff', border: '1px solid #93c5fd', padding: '0.75rem', borderRadius: '8px', fontSize: '0.8rem', color: '#1e40af' }}>
@@ -3835,8 +3840,21 @@ export default function FinanceiroView({
                   className="form-select" 
                   style={{ marginTop: '0.5rem', fontSize: '0.8rem', background: '#ffffff' }}
                   onChange={(e) => {
-                    if (e.target.value) {
-                      alert(`Dados do lançamento "${e.target.value}" importados do Contas a Pagar! Informe apenas a Chave NFe (44 dígitos).`);
+                    const desc = e.target.value;
+                    if (desc) {
+                      const found = contasPagar.find(cp => cp.descricao === desc);
+                      if (found) {
+                        setNewNFe(prev => ({
+                          ...prev,
+                          fornecedor: found.fornecedor,
+                          cnpjFornecedor: found.cnpj,
+                          nfeValorTotal: String(found.valor),
+                          rubrica: found.categoria || prev.rubrica,
+                          contaPagadoraSegregada: found.contaPagadora || prev.contaPagadoraSegregada,
+                          termoMROSC: found.termoMROSC || prev.termoMROSC
+                        }));
+                        alert(`Dados do lançamento "${found.fornecedor}" importados com sucesso! Informe o Número e Chave da NFe.`);
+                      }
                     }
                   }}
                 >
@@ -3852,23 +3870,61 @@ export default function FinanceiroView({
               <div className="grid-2">
                 <div>
                   <label className="form-label">Número da Nota Fiscal (NFe) *</label>
-                  <input type="text" className="form-input" required placeholder="Ex: NFe-9812" />
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    required 
+                    placeholder="Ex: NFe-9812" 
+                    value={newNFe.nfeNumero || ''}
+                    onChange={(e) => setNewNFe({ ...newNFe, nfeNumero: e.target.value })}
+                  />
                 </div>
                 <div>
                   <label className="form-label">Valor Total NFe (R$) *</label>
-                  <input type="number" step="0.01" className="form-input" required placeholder="0.00" />
+                  <input 
+                    type="number" 
+                    step="0.01" 
+                    className="form-input" 
+                    required 
+                    placeholder="0.00" 
+                    value={newNFe.nfeValorTotal || ''}
+                    onChange={(e) => setNewNFe({ ...newNFe, nfeValorTotal: e.target.value })}
+                  />
                 </div>
               </div>
 
               <div>
                 <label className="form-label">Chave de Acesso SEFAZ (44 Dígitos) *</label>
-                <input type="text" className="form-input" required maxLength={44} placeholder="Ex: 29260175315333000109550010000098121004829104" style={{ fontFamily: 'monospace' }} />
+                <input 
+                  type="text" 
+                  className="form-input" 
+                  required 
+                  maxLength={44} 
+                  placeholder="Ex: 29260175315333000109550010000098121004829104" 
+                  style={{ fontFamily: 'monospace' }} 
+                  value={newNFe.nfeChave || ''}
+                  onChange={(e) => setNewNFe({ ...newNFe, nfeChave: e.target.value })}
+                />
               </div>
 
               <div className="grid-2">
                 <div>
                   <label className="form-label">Fornecedor Favorecido *</label>
-                  <select className="form-select" required>
+                  <select 
+                    className="form-select" 
+                    required
+                    value={newNFe.fornecedor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      let cnpj = '12.480.112/0001-88';
+                      if (val.includes('Atacadão')) cnpj = '75.315.333/0001-09';
+                      else if (val.includes('EMBASA')) cnpj = '13.504.675/0001-10';
+                      else if (val.includes('COELBA')) cnpj = '15.135.960/0001-10';
+                      else if (val.includes('Nacional Gás')) cnpj = '08.561.701/0001-44';
+                      setNewNFe({ ...newNFe, fornecedor: val, cnpjFornecedor: cnpj });
+                    }}
+                  >
+                    <option value="Distribuidora Ceasa Salvador Ltda">Distribuidora Ceasa Salvador Ltda (CNPJ: 12.480.112/0001-88)</option>
                     <option value="Atacadão S.A.">Atacadão S.A. (CNPJ: 75.315.333/0001-09)</option>
                     <option value="EMBASA">EMBASA (CNPJ: 13.504.675/0001-10)</option>
                     <option value="COELBA">COELBA (CNPJ: 15.135.960/0001-10)</option>
@@ -3876,30 +3932,111 @@ export default function FinanceiroView({
                   </select>
                 </div>
                 <div>
-                  <label className="form-label">Conta Pagadora Segregada *</label>
-                  <select className="form-select" required>
+                  <label className="form-label">Conta Pagadora Segregada (Muralha Chinesa) *</label>
+                  <select 
+                    className="form-select" 
+                    required
+                    value={newNFe.contaPagadoraSegregada}
+                    onChange={(e) => setNewNFe({ ...newNFe, contaPagadoraSegregada: e.target.value })}
+                  >
                     {bancosList.map(b => (
-                      <option key={b.id} value={`${b.nome} (C/C ${b.conta})`}>{b.nome} ({b.conta})</option>
+                      <option key={b.id} value={`${b.nome} (C/C ${b.conta})`}>
+                        {b.nome} ({b.conta}) {b.conta === '14.502-1' ? '🛡️ [MROSC Segregada]' : ''}
+                      </option>
                     ))}
                   </select>
                 </div>
               </div>
 
+              {/* SELETOR DE FORMA DE PAGAMENTO COM TRAVA DO ART. 53 */}
+              <div className="grid-2">
+                <div>
+                  <label className="form-label" style={{ fontWeight: 800, color: 'var(--text-main)' }}>
+                    Forma de Pagamento / Liquidação *
+                  </label>
+                  <select 
+                    className="form-select" 
+                    required
+                    value={newNFe.formaPagamento}
+                    onChange={(e) => setNewNFe({ ...newNFe, formaPagamento: e.target.value })}
+                    style={{
+                      borderColor: (newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO')) ? '#ef4444' : '#10b981',
+                      background: (newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO')) ? '#fef2f2' : '#ffffff'
+                    }}
+                  >
+                    <option value="TED Eletrônica Identificada">✓ TED Eletrônica Identificada (Mesma Titularidade PJ Favorecida)</option>
+                    <option value="PIX Identificado com TXID">✓ PIX Identificado (Chave CNPJ com TXID Vinculado)</option>
+                    <option value="Boleto Bancário Registrado">✓ Boleto Bancário Registrado (Código de Barras Liquidado no BB)</option>
+                    <option value="Débito Autorizado em Conta">✓ Débito em Conta Autorizado (Concessionária de Serviço Público)</option>
+                    <option value="Folha de Pagamento em Lote CNAB 240">✓ Folha em Lote CNAB 240 Banco do Brasil (Salários CLT)</option>
+                    <option value="❌ CHEQUE NOMINATIVO OU AO PORTADOR [PROIBIDO ART. 53]">❌ CHEQUE NOMINATIVO / AO PORTADOR [PROIBIDO LEI 13.019]</option>
+                    <option value="❌ DINHEIRO VIVO EM ESPÉCIE / SAQUE NA BOCA DO CAIXA [PROIBIDO ART. 53]">❌ DINHEIRO VIVO EM ESPÉCIE / SAQUE [PROIBIDO LEI 13.019]</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="form-label">Autenticação Bancária (TXID / Código Comprovante) *</label>
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    required 
+                    placeholder="Ex: TED-BB-1029482019 ou PIX-TXID-884029"
+                    value={newNFe.txidBancario || ''}
+                    onChange={(e) => setNewNFe({ ...newNFe, txidBancario: e.target.value })}
+                    style={{ fontFamily: 'monospace' }}
+                  />
+                </div>
+              </div>
+
+              {/* TRAVA IMPEDITIVA REGULATÓRIA P0 - ART. 53 DA LEI 13.019/2014 */}
+              {(newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO') || newNFe.formaPagamento.includes('ESPÉCIE')) && (
+                <div style={{ background: '#fef2f2', border: '2px solid #ef4444', padding: '0.85rem', borderRadius: '8px', color: '#991b1b', display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 800, fontSize: '0.9rem' }}>
+                    <ShieldAlert size={20} style={{ color: '#ef4444' }} />
+                    ⛔ TRAVA REGULATÓRIA P0: VIOLAÇÃO DO ART. 53 DA LEI FEDERAL Nº 13.019/2014 & TCE-BA
+                  </div>
+                  <div style={{ fontSize: '0.8rem', lineHeight: '1.4' }}>
+                    É <strong>terminantemente proibido</strong> o pagamento em espécie (dinheiro vivo) ou emissão de cheques nominais/ao portador com recursos públicos do Termo de Fomento nº 005/2022. Os pagamentos devem ser efetuados exclusivamente mediante crédito em conta corrente do fornecedor ou débito direto em conta das concessionárias.
+                  </div>
+                  <div style={{ fontSize: '0.75rem', fontWeight: 700, color: '#b91c1c' }}>
+                    ⚠️ Esta liquidação está BLOQUEADA e não poderá ser salva até a seleção de uma modalidade eletrônica autorizada.
+                  </div>
+                </div>
+              )}
+
+              {/* MURALHA CHINESA DE CONTAS SEGREGADAS */}
+              <div style={{ background: '#f0fdf4', border: '1px solid #86efac', padding: '0.75rem', borderRadius: '6px', fontSize: '0.775rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ShieldCheck size={18} style={{ color: '#16a34a', flexShrink: 0 }} />
+                <div>
+                  <strong>Muralha Chinesa Ativa (ADR 003)</strong>: Conta C/C 14.502-1 isolada de recursos próprios. Todo lançamento é conciliado com o extrato bancário oficial e carimbado eletronicamente para os Anexos II e III do TCE-BA.
+                </div>
+              </div>
+
               <div>
                 <label className="form-label">Termo MROSC Vinculado *</label>
-                <select className="form-select" required>
-                  <option value="Termo de Fomento nº 005/2022 (SJDH-BA)">Termo de Fomento nº 005/2022 (SJDH-BA)</option>
+                <select 
+                  className="form-select" 
+                  required
+                  value={newNFe.termoMROSC}
+                  onChange={(e) => setNewNFe({ ...newNFe, termoMROSC: e.target.value })}
+                >
+                  <option value="Termo de Fomento nº 005/2022 (SJDH-BA)">Termo de Fomento nº 005/2022 (SJDH-BA) — R$ 161,85 Milhões</option>
                   <option value="Termo de Colaboração nº 008/2025 (PMC)">Termo de Colaboração nº 008/2025 (PMC)</option>
                 </select>
               </div>
 
-              <div style={{ background: '#ecfdf5', border: '1px solid #6ee7b7', padding: '0.75rem', borderRadius: '6px', fontSize: '0.775rem', color: '#065f46' }}>
-                ✓ <strong>Carimbo Eletrônico Automático</strong>: O carimbo de vinculação e chancela da Lei 13.019/2014 será gravado no documento e sincronizado ao REF.
-              </div>
-
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem', marginTop: '1rem' }}>
                 <button type="button" className="btn btn-secondary" onClick={() => setShowNFeModal(false)}>Cancelar</button>
-                <button type="submit" className="btn btn-primary">+ Registrar NFe & Homologar</button>
+                <button 
+                  type="submit" 
+                  className="btn btn-primary"
+                  disabled={newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO') || newNFe.formaPagamento.includes('ESPÉCIE')}
+                  style={{
+                    opacity: (newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO') || newNFe.formaPagamento.includes('ESPÉCIE')) ? 0.5 : 1,
+                    cursor: (newNFe.formaPagamento.includes('CHEQUE') || newNFe.formaPagamento.includes('DINHEIRO') || newNFe.formaPagamento.includes('ESPÉCIE')) ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  + Registrar NFe & Homologar Liquidação
+                </button>
               </div>
             </form>
           </div>

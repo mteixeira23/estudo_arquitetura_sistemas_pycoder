@@ -667,11 +667,51 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
         </div>
       </div>
 
+      {/* PAINEL REGULATÓRIO SANITÁRIO P0: CÂMARAS FRIAS -18°C & ASO MANIPULADORES (RF-M06-02 / RF-M06-04) */}
+      <div className="card" style={{ background: '#f8fafc', borderLeft: '4px solid #0284c7', padding: '0.85rem 1.25rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem', marginBottom: '0.6rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <HeartPulse size={20} style={{ color: '#0284c7' }} />
+            <div>
+              <span style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>
+                Sentinela Sanitário P0: Cadeia de Frio & ASO Ocupacional (RDC 216 ANVISA)
+              </span>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                Telemetria de temperatura das câmaras frias em tempo real e controle de aptidão física das 18 cozinheiras/auxiliares.
+              </div>
+            </div>
+          </div>
+          <span className="badge badge-success" style={{ fontSize: '0.725rem' }}>
+            ✓ 100% em Conformidade Sanitária
+          </span>
+        </div>
 
+        <div className="grid-3" style={{ gap: '0.75rem' }}>
+          <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Câmara 01 (Carnes Bovina/Frango)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>-19.4°C</div>
+            </div>
+            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Teto: -18.0°C OK</span>
+          </div>
 
+          <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Câmara 02 (Polpas & Pescados)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#059669' }}>-18.7°C</div>
+            </div>
+            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Teto: -18.0°C OK</span>
+          </div>
 
-
-      {/* KPI Cards */}
+          <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>ASO & Coprocultura (18 Cozinheiras)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2563eb' }}>18 / 18 Aptas</div>
+            </div>
+            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Validade &lt; 12m</span>
+          </div>
+        </div>
+      </div>
       <div className="grid-4">
         <div className="stat-card" style={{ borderLeft: '4px solid #10b981' }}>
           <div className="stat-icon" style={{ background: 'rgba(16, 185, 129, 0.12)', color: '#10b981' }}>
