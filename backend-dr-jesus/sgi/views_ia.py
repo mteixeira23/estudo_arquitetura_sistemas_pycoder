@@ -3,6 +3,7 @@ from django.http import StreamingHttpResponse
 from rest_framework.views import APIView
 from rest_framework import permissions, status
 from rest_framework.response import Response
+import os
 
 from .models import Prontuario
 from .ai.streaming import gerar_stream_prontuario, gerar_stream_chat_geral
@@ -162,6 +163,32 @@ class HermesSREDiagnosticView(APIView):
             user=request.user,
             request=request
         )
+
+        return Response(resultado, status=status.HTTP_200_OK)
+
+
+class CaravanaDossieView(APIView):
+    """
+    Endpoint para geração e visualização do Dossiê Executivo Consolidado
+    da Caravana de Direitos Humanos SJDH Bahia sob gestão do Hermes Agent.
+    """
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        ano_str = request.query_params.get("ano")
+        ano = int(ano_str) if ano_str and ano_str.isdigit() else None
+        mes = request.query_params.get("mes")
+        formato = request.query_params.get("format", "json")
+
+        from .ai.caravana_tools import export_dossie_executivo_pdf
+        resultado = export_dossie_executivo_pdf(filtro={"ano": ano, "mes": mes})
+
+        if formato == "html":
+            caminho = resultado.get("caminho_local")
+            if caminho and os.path.exists(caminho):
+                with open(caminho, "r", encoding="utf-8") as f:
+                    from django.http import HttpResponse
+                    return HttpResponse(f.read(), content_type="text/html; charset=utf-8")
 
         return Response(resultado, status=status.HTTP_200_OK)
 

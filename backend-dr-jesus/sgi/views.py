@@ -243,7 +243,8 @@ from .views_ia import (
     PerguntarProntuarioIAView,
     ProntuarioStreamIAView,
     ChatGeralStreamIAView,
-    HermesSREDiagnosticView
+    HermesSREDiagnosticView,
+    CaravanaDossieView
 )
 
 

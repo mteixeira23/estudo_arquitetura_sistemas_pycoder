@@ -144,8 +144,19 @@ else:
             # Item 7: Segregação de Pool DB (Celery=0 evita conexões zumbis; Web=300s com health checks ativos)
             'CONN_MAX_AGE': 0 if IS_CELERY_PROCESS else 300,
             'CONN_HEALTH_CHECKS': True,
+        },
+        'caravana': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.environ.get('POSTGRES_CARAVANA_DB', 'caravana_db'),
+            'USER': get_secret('scsi_postgres_user', os.environ.get('POSTGRES_USER', 'drjesus_admin')),
+            'PASSWORD': get_secret('scsi_postgres_password', os.environ.get('POSTGRES_PASSWORD', 'drjesus_senha_forte_123')),
+            'HOST': os.environ.get('POSTGRES_HOST', 'localhost'),
+            'PORT': os.environ.get('POSTGRES_PORT', '5432'),
+            'CONN_MAX_AGE': 0 if IS_CELERY_PROCESS else 300,
+            'CONN_HEALTH_CHECKS': True,
         }
     }
+    DATABASE_ROUTERS = ['sgi.db_routers.CaravanaRouter']
 
 
 

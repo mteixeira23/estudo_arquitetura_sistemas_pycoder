@@ -11,6 +11,7 @@ from .views import (
     ProntuarioStreamIAView,
     ChatGeralStreamIAView,
     HermesSREDiagnosticView,
+    CaravanaDossieView,
     HealthCheckView,
     EcosystemMetricsView,
     EcosystemActionView,
@@ -52,6 +53,9 @@ urlpatterns = [
 
     # Endpoint Cognitivo do Maestro SRE (Hermes Agent / Nous Research)
     path('ia/hermes/sre/', HermesSREDiagnosticView.as_view(), name='ia_hermes_sre'),
+
+    # Endpoint do Dossiê Executivo da Caravana SJDH Bahia (Hermes Tool Calling)
+    path('ia/caravana/dossie/', CaravanaDossieView.as_view(), name='ia_caravana_dossie'),
 ]
 
 

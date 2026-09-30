@@ -28,6 +28,11 @@ from .sre_tools import (
     inspect_security_guardian,
     inspect_full_cluster_sre
 )
+from .caravana_tools import (
+    audit_orcamento_caravana,
+    check_metas_plano_trabalho,
+    export_dossie_executivo_pdf
+)
 
 logger = logging.getLogger(__name__)
 
@@ -81,12 +86,19 @@ def planejar_inspecoes_node(state: HermesSREState) -> Dict[str, Any]:
         selected.append("ollama")
     if "seguran" in cmd or "audit" in cmd or "lgpd" in cmd or "forense" in cmd:
         selected.append("security")
+    if any(k in cmd for k in ["orcamento", "orçamento", "gasto", "rubrica", "financeiro", "saldo", "caravana"]):
+        selected.append("caravana_orcamento")
+    if any(k in cmd for k in ["meta", "plano de trabalho", "territorio", "território", "visita", "municipio", "município"]):
+        selected.append("caravana_metas")
+    if any(k in cmd for k in ["dossie", "dossiê", "relatorio", "relatório", "pdf", "laudo"]):
+        selected.append("caravana_dossie")
 
     # Se nenhum for específico ou se modo for 'full'/'geral', ativa o cluster completo
     if modo == "full" or not selected or "geral" in cmd or "completo" in cmd or "cluster" in cmd:
         selected = [
             "cloudflare", "database", "rabbitmq", "redis", "celery",
-            "traefik", "frontend", "django", "ollama", "security"
+            "traefik", "frontend", "django", "ollama", "security",
+            "caravana_orcamento", "caravana_metas"
         ]
 
     logger.info(f"[Hermes SRE] Planejamento concluído. Guardiões ativados: {selected}")
@@ -111,6 +123,9 @@ def executar_guardioes_node(state: HermesSREState) -> Dict[str, Any]:
         "django": inspect_django_guardian,
         "ollama": inspect_ollama_guardian,
         "security": inspect_security_guardian,
+        "caravana_orcamento": audit_orcamento_caravana,
+        "caravana_metas": check_metas_plano_trabalho,
+        "caravana_dossie": export_dossie_executivo_pdf,
     }
 
     healthy_count = 0
@@ -191,9 +206,11 @@ def sintetizar_laudo_node(state: HermesSREState) -> Dict[str, Any]:
         llm = get_llm(model="llama3.2:3b", temperature=0.2)
         prompt_sys = SystemMessage(
             content=(
-                "Você é o Hermes Agent (Nous Research), Chief SRE Leader do ecossistema SGI Fundação Dr. Jesus. "
-                "Com base no relatório factual de telemetria dos guardiões de container abaixo, gere um laudo executivo "
-                "técnico, preciso, em português, destacando a higidez dos serviços e recomendações pontuais."
+                "Você é o Hermes Agent (Nous Research), Chief SRE Leader e Auditor Cognitivo do ecossistema Integrado "
+                "(SGI Fundação Dr. Jesus & Caravana de Direitos Humanos SJDH Bahia). "
+                "Com base no relatório factual de telemetria técnica e dados orçamentários/operacionais abaixo, "
+                "gere um laudo executivo preciso, em português, destacando a higidez dos serviços, "
+                "situação orçamentária do convênio, alcance de metas nos territórios baianos e recomendações pontuais."
             )
         )
         prompt_human = HumanMessage(content=sintese_final)

@@ -561,11 +561,13 @@ services:
       - HERMES_DASHBOARD_BASIC_AUTH_PASSWORD=Marquito.2323
       - HERMES_DASHBOARD_BASIC_AUTH_SECRET=c3NzaS1oZXJtZXMtc2VjcmV0LWRyamVzdXMtMjAyNg==
       - SGI_API_BASE_URL=https://api.singulariconsult.com.br/api/v1
+      - CARAVANA_API_BASE_URL=https://caravana.singulariconsult.com.br/rest/v1
     volumes:
       - dr_jesus_hermes_data:/opt/data
     networks:
       - scsi_public
       - scsi_internal
+      - scsi_data
     deploy:
       mode: replicated
       replicas: 1
