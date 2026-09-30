@@ -108,10 +108,13 @@ def audit_orcamento_caravana(ano: Optional[int] = None, mes: Optional[str] = Non
 
             # Se orcamento_detalhado não tiver registros para o filtro, tenta orcamento_total_projeto
             if total_orcado == 0:
-                cursor.execute("SELECT COALESCE(SUM(valor_total), 0) FROM public.orcamento_total_projeto;")
-                row_t = cursor.fetchone()
-                if row_t and row_t[0]:
-                    total_orcado = Decimal(str(row_t[0]))
+                try:
+                    cursor.execute("SELECT COALESCE(SUM(valor_total_projeto), 0) FROM public.orcamento_total_projeto;")
+                    row_t = cursor.fetchone()
+                    if row_t and row_t[0]:
+                        total_orcado = Decimal(str(row_t[0]))
+                except Exception as exc_total:
+                    logger.warning(f"Fallback orcamento_total_projeto: {exc_total}")
 
             # Cálculos e consolidação
             saldo = total_orcado - total_realizado
@@ -239,13 +242,18 @@ def check_metas_plano_trabalho(ano: Optional[int] = None) -> Dict[str, Any]:
             total_territorios_cadastrados = row_terr[0] if row_terr else 27
 
             # Visitas em territórios
-            cursor.execute("""
-                SELECT count(DISTINCT territorio_id) 
-                FROM public.territorios_identidade_visitas
-                WHERE visitado = true;
-            """)
-            row_vis = cursor.fetchone()
-            territorios_visitados = row_vis[0] if row_vis and row_vis[0] > 0 else min(total_locais, 27)
+            territorios_visitados = min(total_locais, 27)
+            try:
+                cursor.execute("""
+                    SELECT count(DISTINCT territorio_nome) 
+                    FROM public.territorios_identidade_visitas
+                    WHERE qtd_municipios_visitados > 0;
+                """)
+                row_vis = cursor.fetchone()
+                if row_vis and row_vis[0] and row_vis[0] > 0:
+                    territorios_visitados = row_vis[0]
+            except Exception as exc_terr:
+                logger.warning(f"Fallback territorios_visitas: {exc_terr}")
 
             pct_cobertura = round((territorios_visitados / 27.0) * 100, 1)
 
