@@ -286,3 +286,125 @@ def gerar_relatorio_mensal_conformidade_sre_task():
     logger.info("[Celery Beat] Relatório Executivo Mensal concluído: %s", res.get("message"))
     return res
 
+
+@shared_task(name="sgi.tasks.patrulha_financeira_caravana_task")
+def patrulha_financeira_caravana_task():
+    """
+    Patrulha Diária Autônoma de Conformidade Orçamentária da Caravana SJDH Bahia (Fase 5).
+    Executada diariamente às 07:00 UTC (04:00 BRT) pelo Celery Beat.
+    Audita rubricas, saldo remanescente e metas territoriais.
+    Dispara laudo e alerta ativo se houver estouro (> 100%) ou risco (> 85%) em qualquer rubrica.
+    """
+    from sgi.ai.caravana_tools import audit_orcamento_caravana, check_metas_plano_trabalho, export_dossie_executivo_pdf
+    from django.core.mail import send_mail
+    from django.conf import settings
+    from sgi.models import AuditLog
+
+    logger.info("[Hermes Financial Patrol] Iniciando patrulha diária da Caravana SJDH...")
+
+    audit_fin = audit_orcamento_caravana()
+    audit_ops = check_metas_plano_trabalho()
+    dossie = export_dossie_executivo_pdf()
+
+    desvios = audit_fin.get("desvios_criticos", [])
+    m_fin = audit_fin.get("metricas_globais", {})
+    m_ops = audit_ops.get("metricas_operacionais", {})
+
+    status_geral = audit_fin.get("status", "healthy")
+    alerta_disparado = False
+    webhook_disparado = False
+
+    # Dispara alerta se houver qualquer rubrica em estado de alerta ou crítico
+    if desvios or status_geral != "healthy":
+        alerta_disparado = True
+        logger.warning(f"[Hermes Financial Patrol] Alerta orçamentário detectado! {len(desvios)} desvios.")
+
+        destinatario = os.environ.get("ALERT_EMAIL_RECIPIENT", "admin@singulariconsult.com.br")
+        assunto = f"[AUDITORIA HERMES CARAVANA] Relatório Diário Caravana SJDH ({len(desvios)} alertas orçamentários)"
+
+        linhas_desvios = "\n".join([f"• [{d.get('gravidade')}] {d.get('grupo')}: {d.get('motivo')} -> {d.get('acao_recomendada')}" for d in desvios])
+
+        corpo = (
+            f"Prezada equipe de Gestão e Governança,\n\n"
+            f"O Hermes Agent (Nous Research) concluiu a patrulha financeira diária da Caravana de Direitos Humanos SJDH Bahia:\n\n"
+            f"📊 MÉTRICAS GLOBAIS:\n"
+            f"• Total Orçado: R$ {m_fin.get('total_orcado', 0):,.2f}\n"
+            f"• Total Realizado: R$ {m_fin.get('total_realizado', 0):,.2f}\n"
+            f"• Saldo Remanescente: R$ {m_fin.get('saldo_remanescente', 0):,.2f}\n"
+            f"• Execução Global: {m_fin.get('percentual_execucao', 0)}%\n\n"
+            f"📍 OPERACIONAL:\n"
+            f"• Caravanas Realizadas: {m_ops.get('total_caravanas_realizadas', 0)}\n"
+            f"• Territórios da Bahia: {m_ops.get('territorios_cobertos', 0)} / 27 ({m_ops.get('percentual_cobertura_territorial', 0)}%)\n\n"
+            f"⚠️ ALERTAS POR RUBRICA:\n"
+            f"{linhas_desvios if desvios else 'Nenhum desvio crítico detectado.'}\n\n"
+            f"Dossiê Executivo gerado: {dossie.get('arquivo_gerado')}\n"
+            f"Acesse o Mission Control Dashboard para mais detalhes: https://api.singulariconsult.com.br/dashboard/\n\n"
+            f"--\n"
+            f"Hermes Agent • SGI Fundação Dr. Jesus & SJDH Bahia • Padrão SCSI PycoderBR"
+        )
+
+        try:
+            send_mail(
+                subject=assunto,
+                message=corpo,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[destinatario],
+                fail_silently=True
+            )
+            logger.info(f"[Hermes Financial Patrol] E-mail de auditoria despachado para {destinatario}.")
+        except Exception as exc:
+            logger.error(f"[Hermes Financial Patrol] Falha ao enviar e-mail: {exc}")
+
+        # Webhook instantâneo (Discord, Telegram, Slack, etc.)
+        webhook_url = os.environ.get("SRE_ALERT_WEBHOOK_URL", "").strip()
+        if webhook_url:
+            try:
+                import urllib.request
+                import json
+                webhook_data = {
+                    "content": f"📊 **[AUDITORIA HERMES CARAVANA]** Execução: `{m_fin.get('percentual_execucao', 0)}%` | Saldo: `R$ {m_fin.get('saldo_remanescente', 0):,.2f}` | Alertas: `{len(desvios)}`",
+                    "embeds": [{
+                        "title": "Laudo Financeiro Caravana SJDH Bahia",
+                        "description": corpo[:1800],
+                        "color": 15158332 if any(d.get("gravidade") == "CRÍTICO" for d in desvios) else 3066993,
+                        "url": "https://api.singulariconsult.com.br/dashboard/",
+                        "footer": {"text": "SGI Fundação Dr. Jesus & SJDH Bahia"}
+                    }]
+                }
+                req = urllib.request.Request(
+                    webhook_url,
+                    data=json.dumps(webhook_data).encode("utf-8"),
+                    headers={"Content-Type": "application/json", "User-Agent": "SCSI-Hermes/1.0"}
+                )
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    webhook_disparado = True
+                    logger.info(f"[Hermes Financial Patrol] Webhook despachado com HTTP {resp.status}.")
+            except Exception as w_exc:
+                logger.error(f"[Hermes Financial Patrol] Falha no webhook: {w_exc}")
+
+        # Registra no AuditLog
+        try:
+            AuditLog.registrar(
+                usuario=None,
+                acao=AuditLog.AcaoChoices.EXPORT,
+                recurso="HermesFinancialPatrol",
+                recurso_id="daily-caravana-patrol",
+                detalhes={
+                    "alerta": "PATRULHA_FINANCEIRA_CARAVANA",
+                    "desvios_count": len(desvios),
+                    "execucao_pct": m_fin.get("percentual_execucao", 0),
+                    "saldo_remanescente": m_fin.get("saldo_remanescente", 0),
+                    "webhook_disparado": webhook_disparado
+                }
+            )
+        except Exception as exc:
+            logger.warning(f"[Hermes Financial Patrol] Falha ao registrar AuditLog: {exc}")
+
+    return {
+        "status": status_geral,
+        "desvios_count": len(desvios),
+        "alerta_disparado": alerta_disparado,
+        "webhook_disparado": webhook_disparado,
+        "dossie_arquivo": dossie.get("arquivo_gerado")
+    }
+

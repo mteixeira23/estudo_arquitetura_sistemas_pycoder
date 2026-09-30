@@ -371,6 +371,10 @@ CELERY_BEAT_SCHEDULE = {
         'task': 'sgi.tasks.gerar_relatorio_mensal_conformidade_sre_task',
         'schedule': crontab(day_of_month=1, hour=1, minute=0),  # Todo dia 1º do mês às 01:00 UTC
     },
+    'patrulha-financeira-caravana-diaria': {
+        'task': 'sgi.tasks.patrulha_financeira_caravana_task',
+        'schedule': crontab(hour=7, minute=0),  # Todo dia às 07:00 UTC (04:00 BRT)
+    },
 }
 
 

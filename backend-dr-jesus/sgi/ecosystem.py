@@ -344,6 +344,47 @@ class EcosystemMetricsService:
         }
 
     @staticmethod
+    def check_caravana():
+        t0 = time.perf_counter()
+        result = {
+            "name": "Caravana SJDH Bahia (PostgreSQL 16 & PostgREST)",
+            "category": "caravana",
+            "status": "ok",
+            "latency_ms": 0,
+            "details": {}
+        }
+        try:
+            from django.db import connections
+            conn = connections['caravana']
+            with conn.cursor() as cursor:
+                cursor.execute("SELECT count(*) FROM public.lancamentos;")
+                count_lanc = cursor.fetchone()[0]
+                cursor.execute("SELECT count(*) FROM public.caravanas;")
+                count_carav = cursor.fetchone()[0]
+                cursor.execute("SELECT COALESCE(SUM(realizado), 0) FROM public.lancamentos;")
+                total_realizado = float(cursor.fetchone()[0] or 0)
+                cursor.execute("SELECT COALESCE(SUM(valor_total_projeto), 0) FROM public.orcamento_total_projeto;")
+                total_orcado = float(cursor.fetchone()[0] or 0)
+
+            pct_exec = round((total_realizado / total_orcado * 100), 2) if total_orcado > 0 else 0.0
+
+            result["latency_ms"] = round((time.perf_counter() - t0) * 1000, 2)
+            result["details"] = {
+                "banco": "caravana_db (PostgreSQL 16)",
+                "total_lancamentos": count_lanc,
+                "total_caravanas": count_carav,
+                "total_orcado": f"R$ {total_orcado:,.2f}",
+                "total_realizado": f"R$ {total_realizado:,.2f}",
+                "execucao_orcamentaria": f"{pct_exec}%",
+                "dominio": "https://caravana.singulariconsult.com.br",
+                "status": "Operacional com Soberania Total"
+            }
+        except Exception as exc:
+            result["status"] = "warning"
+            result["details"]["error"] = str(exc)
+        return result
+
+    @staticmethod
     def check_frontend():
         t0 = time.perf_counter()
         result = {
@@ -408,6 +449,7 @@ class EcosystemMetricsService:
             cls.check_traefik,
             cls.check_frontend,
             cls.check_postgres,
+            cls.check_caravana,
             cls.check_redis,
             cls.check_rabbitmq,
             cls.check_celery,
