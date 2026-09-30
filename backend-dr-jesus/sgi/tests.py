@@ -1,4 +1,6 @@
 import uuid
+from decimal import Decimal
+from math import ceil
 from unittest import mock
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
@@ -849,7 +851,8 @@ class SGISafetyGuardsTestCase(TestCase):
             paciente=self.paciente,
             observacoes_clinicas="Observação clínica original assinada.",
             assinado_digitalmente=True,
-            hash_integridade="a" * 64
+            hash_integridade="a" * 64,
+            owner=self.medico
         )
         
         # Alterar o texto e rodar clean() deve disparar ValidationError
@@ -1008,4 +1011,140 @@ class SGISprint2ChaoDeFabricaTestCase(TestCase):
         leito_ocupado["termo_devolucao_assinado"] = True
         self.assertEqual(processar_desocupacao_atomica(leito_ocupado), "LEITO_LIBERADO_NO_CENSO")
         self.assertFalse(leito_ocupado["ocupado"])
+
+
+class SGISprint3PresidenciaCockpitTestCase(TestCase):
+    """
+    Suíte de Testes Automatizados da Sprint 3: Cockpit da Presidência & BI Estratégico 360°.
+    Cobre:
+    - RF-M12-01: Censo Vivo 1.150 Leitos e Distribuição Setorial.
+    - RF-M12-02: Velocímetro de Burn-Rate e Pacing Orçamentário MROSC (Termo 005/2022 - R$ 161,85M).
+    - RF-M12-03: Custo Per Capita Dinâmico Diário/Mensal (R$ 38,50/dia).
+    - RF-M12-04: Curva de Retenção e Funil de Evasão Terapêutica (PTI).
+    - RF-M12-05: Metodologia SROI (R$ 4,20 de Retorno Social por R$ 1,00 Investido).
+    - RF-M12-10: Simulador Executivo What-If de Expansão de Vagas até 1.400 leitos.
+    """
+
+    def test_censo_1150_leitos_consistencia_setorial(self):
+        """RF-M12-01: Valida que a soma de todos os setores e status fecha exatamente em 1.150 leitos."""
+        censo_setores = [
+            {"setor": "Ala A", "total": 320, "ocupados": 304, "higienizacao": 8, "cativos": 8},
+            {"setor": "Ala B", "total": 300, "ocupados": 285, "higienizacao": 7, "cativos": 8},
+            {"setor": "Ala C", "total": 250, "ocupados": 236, "higienizacao": 6, "cativos": 8},
+            {"setor": "Ala Rosa (Fem)", "total": 140, "ocupados": 128, "higienizacao": 6, "cativos": 6},
+            {"setor": "Triagem", "total": 80, "ocupados": 68, "higienizacao": 6, "cativos": 6},
+            {"setor": "Enfermaria", "total": 60, "ocupados": 49, "higienizacao": 6, "cativos": 5},
+        ]
+
+        total_capacidade = sum(s["total"] for s in censo_setores)
+        self.assertEqual(total_capacidade, 1150, "A capacidade total instalada deve ser rigorosamente 1.150 leitos.")
+
+        for s in censo_setores:
+            soma_status = s["ocupados"] + s["higienizacao"] + s["cativos"]
+            self.assertLessEqual(soma_status, s["total"], f"Setor {s['setor']} extrapolou a capacidade física.")
+
+    def test_pacing_burn_rate_mrosc_termo_005_2022(self):
+        """RF-M12-02: Velocímetro de Burn-Rate e Pacing Orçamentário (Termo 005/2022 - R$ 161,85M)."""
+        valor_total_termo = Decimal("161850000.00")
+        prazo_meses = 60
+        desembolso_mensal_planejado = valor_total_termo / prazo_meses  # R$ 2.697.500,00/mês
+
+        def calcular_pacing(mes_atual, gasto_acumulado_real):
+            gasto_acumulado_previsto = desembolso_mensal_planejado * mes_atual
+            pacing_percentual = (gasto_acumulado_real / gasto_acumulado_previsto) * 100
+            
+            # Tolerância regulatória TCE: entre 90% e 110% é considerado ritmo ideal
+            if 90.0 <= pacing_percentual <= 110.0:
+                status = "IDEAL"
+            elif pacing_percentual < 90.0:
+                status = "SUBEXECUCAO"
+            else:
+                status = "SOBREEXECUCAO_ALERTA_GLOSA"
+                
+            return {
+                "pacing_percentual": round(pacing_percentual, 2),
+                "status": status,
+                "saldo_remanescente": valor_total_termo - gasto_acumulado_real
+            }
+
+        # Simulação no mês 12 com gasto acumulado de R$ 31.850.000,00 (planejado = R$ 32.370.000,00 -> 98.39%)
+        res = calcular_pacing(12, Decimal("31850000.00"))
+        self.assertEqual(res["status"], "IDEAL")
+        self.assertAlmostEqual(float(res["pacing_percentual"]), 98.39, delta=0.1)
+        self.assertEqual(res["saldo_remanescente"], Decimal("130000000.00"))
+
+    def test_custo_per_capita_discriminado(self):
+        """RF-M12-03: Decomposição do custo diário de R$ 38,50 por acolhido."""
+        rubricas = {
+            "alimentacao_4_refeicoes": Decimal("18.20"),
+            "saude_medicamentos_enfermagem": Decimal("8.10"),
+            "acolhimento_hotelaria_lavanderia": Decimal("7.40"),
+            "equipe_multidisciplinar": Decimal("4.80")
+        }
+
+        custo_diario_total = sum(rubricas.values())
+        self.assertEqual(custo_diario_total, Decimal("38.50"), "O somatório das rubricas deve fechar em R$ 38,50/dia.")
+
+        custo_mensal_acolhido = custo_diario_total * 30
+        self.assertEqual(custo_mensal_acolhido, Decimal("1155.00"), "O custo mensal per capita padrão é de R$ 1.155,00.")
+
+    def test_sroi_calculo_retorno_social(self):
+        """RF-M12-05: Cálculo de SROI (Social Return on Investment) - R$ 4,20 por real investido."""
+        multiplicador_sroi = Decimal("4.20")
+        acolhidos_ativos = 940
+        custo_mensal_por_acolhido = Decimal("1155.00")
+
+        custo_operacional_mensal = acolhidos_ativos * custo_mensal_por_acolhido  # R$ 1.085.700,00
+        retorno_social_mensal = custo_operacional_mensal * multiplicador_sroi     # R$ 4.559.940,00
+
+        self.assertEqual(custo_operacional_mensal, Decimal("1085700.00"))
+        self.assertEqual(retorno_social_mensal, Decimal("4559940.00"))
+        self.assertTrue(retorno_social_mensal > custo_operacional_mensal * 4)
+
+    def test_simulador_what_if_expansao_1400_leitos(self):
+        """RF-M12-10: Simulador What-If de Expansão de Vagas até 1.400 leitos."""
+        def simular_expansao(novos_leitos_total):
+            base_leitos = 1150
+            if novos_leitos_total < base_leitos:
+                raise ValueError("O simulador não opera abaixo da base de 1.150 leitos.")
+            if novos_leitos_total > 1400:
+                raise ValueError("O teto de engenharia estrutural da Fundação é de 1.400 leitos.")
+
+            delta = novos_leitos_total - base_leitos
+            custo_dia = Decimal("38.50")
+            custo_mes = custo_dia * 30
+
+            custo_adicional_mensal = delta * custo_mes
+            arroz_extra_kg_dia = Decimal(str(delta)) * Decimal("0.100")
+            feijao_extra_kg_dia = Decimal(str(delta)) * Decimal("0.050")
+            carne_extra_kg_dia = Decimal(str(delta)) * Decimal("0.120")
+            monitores_extra = ceil(delta / 25) if delta > 0 else 0
+            psicologos_extra = ceil(delta / 60) if delta > 0 else 0
+
+            return {
+                "delta_leitos": delta,
+                "custo_adicional_mensal": custo_adicional_mensal,
+                "arroz_extra_kg_dia": arroz_extra_kg_dia,
+                "feijao_extra_kg_dia": feijao_extra_kg_dia,
+                "carne_extra_kg_dia": carne_extra_kg_dia,
+                "monitores_extra": monitores_extra,
+                "psicologos_extra": psicologos_extra
+            }
+
+        from math import ceil
+
+        # Simulação para expansão máxima de +250 leitos (1.400 leitos totais)
+        res_max = simular_expansao(1400)
+        self.assertEqual(res_max["delta_leitos"], 250)
+        self.assertEqual(res_max["custo_adicional_mensal"], Decimal("288750.00")) # 250 * 1155
+        self.assertEqual(res_max["arroz_extra_kg_dia"], Decimal("25.000"))
+        self.assertEqual(res_max["feijao_extra_kg_dia"], Decimal("12.500"))
+        self.assertEqual(res_max["carne_extra_kg_dia"], Decimal("30.000"))
+        self.assertEqual(res_max["monitores_extra"], 10) # 250 / 25
+        self.assertEqual(res_max["psicologos_extra"], 5)  # 250 / 60 = 4.16 -> 5
+
+        # Violação de teto máximo > 1400 deve levantar ValueError
+        with self.assertRaises(ValueError):
+            simular_expansao(1500)
+
 

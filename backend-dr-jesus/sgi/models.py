@@ -149,8 +149,8 @@ class Prontuario(BaseModel):
 
     def clean(self):
         super().clean()
-        if self.pk:
-            original = Prontuario.objects.filter(pk=self.pk).first()
+        if self.pk and getattr(self, 'owner', None):
+            original = Prontuario.objects.for_user(self.owner).filter(pk=self.pk).first()
             if original and original.assinado_digitalmente and original.observacoes_clinicas != self.observacoes_clinicas:
                 from django.core.exceptions import ValidationError
                 raise ValidationError("Violação de Imutabilidade: Prontuário médico digital assinado não pode ser alterado. Emita termo de aditamento/errata.")
