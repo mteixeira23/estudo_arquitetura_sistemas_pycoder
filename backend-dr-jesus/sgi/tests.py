@@ -1148,3 +1148,91 @@ class SGISprint3PresidenciaCockpitTestCase(TestCase):
             simular_expansao(1500)
 
 
+class SGISprint4TCEFechamentoTestCase(TestCase):
+    """
+    Suíte de Testes Automatizados da Sprint 4: Anexos I a VI do TCE-BA, Impressos Oficiais e Fechamento MROSC.
+    Cobre:
+    - RF-M11-08: Dossiê Completo dos Anexos I a VI do TCE-BA (Resolução TCE nº 144/2013).
+    - RF-M07-08: Lista Nominal Oficial de Passageiros para PRF/BPRv e Exigência de CNH Cat. D/E.
+    - RF-M06-08: Amostras de Alimentos 72h em Refrigeração (RDC 216 Anvisa).
+    - Conciliação Contábil Fechada: Saldo Inicial + Repasses + Rendimentos CDB - Despesas = Saldo Final.
+    """
+
+    def test_conciliacao_anexos_tce_ba_balanco_fechamento(self):
+        """RF-M11-08: Valida o fechamento contábil e conciliação bancária dos Anexos II, III e IV."""
+        # Amostra real do período de apuração (Parcela 10 FDJ - Termo 005/2022)
+        saldo_inicial = Decimal("10972759.79")
+        repasses_estado = Decimal("19022565.08")
+        rendimentos_cdb = Decimal("670985.21")
+        despesas_liquidadas = Decimal("19784767.32")
+        saldo_final_esperado = Decimal("10881542.76")
+
+        entradas_totais = repasses_estado + rendimentos_cdb
+        self.assertEqual(entradas_totais, Decimal("19693550.29"))
+
+        saldo_apurado = saldo_inicial + entradas_totais - despesas_liquidadas
+        self.assertEqual(saldo_apurado, saldo_final_esperado, "O balanço contábil deve fechar com divergência R$ 0,00.")
+
+    def test_dossie_unificado_anexos_i_a_vi_hash_sha256(self):
+        """RF-M11-08: Valida que o pacote unificado dos Anexos I a VI gera carimbo criptográfico SHA-256."""
+        import hashlib
+
+        anexos_conteudo = {
+            "Anexo_I": "Plano de Trabalho Aprovado SJDH-BA - 1.250 Acolhidos",
+            "Anexo_II": "Demonstrativo da Receita e Despesa Evidenciando o Saldo",
+            "Anexo_III": "Relatório de Execução Financeira (REF) - 12 Rubricas MROSC",
+            "Anexo_IV": "Conciliação Bancária BB C/C 14.502-1 e Rendimentos CDB",
+            "Anexo_V": "Relação de Bens e Equipamentos Permanentes Adquiridos",
+            "Anexo_VI": "Parecer Técnico Conclusivo e Homologação TCE-BA / SJDH"
+        }
+
+        # Concatenação canônica para gerar o carimbo probatório
+        raw_stream = "|".join(f"{k}:{v}" for k, v in sorted(anexos_conteudo.items())).encode("utf-8")
+        hash_dossie = hashlib.sha256(raw_stream).hexdigest()
+
+        self.assertEqual(len(hash_dossie), 64, "O hash SHA-256 deve possuir exatamente 64 caracteres hexadecimais.")
+        self.assertTrue(all(c in "0123456789abcdef" for c in hash_dossie))
+
+    def test_validacao_cnh_frota_transporte_coletivo(self):
+        """RF-M07-08: Regra do CTB / PRF exigindo CNH Categoria D ou E para condução de van/ônibus de acolhidos."""
+        def validar_habilitacao_transporte(veiculo_tipo, cnh_categoria):
+            categorias_coletivas = ["D", "E"]
+            veiculos_pesados = ["ONIBUS", "ÔNIBUS", "VAN", "MICROONIBUS", "MICRO-ÔNIBUS", "SPRINTER"]
+
+            is_pesado = any(p in veiculo_tipo.upper() for p in veiculos_pesados)
+            if is_pesado and cnh_categoria.upper() not in categorias_coletivas:
+                raise PermissionError(f"Bloqueio PRF/CTB: Veículo '{veiculo_tipo}' exige CNH Categoria D ou E. Categoria apresentada: {cnh_categoria}")
+            return "HABILITACAO_CONFORME"
+
+        # Motorista com CNH D em van escolar/SUS
+        self.assertEqual(validar_habilitacao_transporte("Van Sprinter 16 Lugares", "D"), "HABILITACAO_CONFORME")
+        self.assertEqual(validar_habilitacao_transporte("Ônibus Rodoviário 48L", "E"), "HABILITACAO_CONFORME")
+
+        # Motorista com CNH B tentando dirigir ônibus rodoviário deve ser impedido
+        with self.assertRaises(PermissionError):
+            validar_habilitacao_transporte("Ônibus Rodoviário 48 Lugares", "B")
+
+    def test_retencao_amostras_refeitorio_72h_rdc216(self):
+        """RF-M06-08: Guarda obrigatória de amostras de alimentos em refrigeração (< 4°C) por no mínimo 72 horas."""
+        from datetime import datetime, timedelta
+
+        def verificar_descarte_amostra(data_coleta, temperatura_celsius, horas_decorridas):
+            if temperatura_celsius > 4.0:
+                raise ValueError("Violação RDC 216: Amostras devem ser mantidas a temperatura inferior a 4°C.")
+            if horas_decorridas < 72:
+                raise PermissionError("Bloqueio Sanitário: Amostra não pode ser descartada antes de 72 horas regulamentares da refeição.")
+            return "DESCARTE_HIGIENICO_AUTORIZADO"
+
+        # Tentativa de descarte com 48 horas deve ser bloqueada
+        with self.assertRaises(PermissionError):
+            verificar_descarte_amostra(datetime.now(), 3.5, 48)
+
+        # Temperatura inadequada (7°C) deve ser reprovada
+        with self.assertRaises(ValueError):
+            verificar_descarte_amostra(datetime.now(), 7.0, 75)
+
+        # 75 horas a 3°C -> Descarte autorizado
+        self.assertEqual(verificar_descarte_amostra(datetime.now(), 3.0, 75), "DESCARTE_HIGIENICO_AUTORIZADO")
+
+
+

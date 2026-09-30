@@ -1582,15 +1582,15 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
         </div>
       )}
 
-      {/* Modal 10: Imprimir Escala de Transporte SUS */}
+      {/* Modal 10: Imprimir Escala e Lista Oficial de Passageiros PRF/BPRv (RF-M07-08) */}
       {(showPrintTransporteModal || printingTransporte) && (
         <div className="modal-overlay">
-          <div className="modal-content" style={{ maxWidth: '750px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-              <span className="badge badge-success">Escala de Transporte de Saúde (SUS)</span>
+          <div className="modal-content" style={{ maxWidth: '850px' }}>
+            <div className="no-print" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <span className="badge badge-success">RF-M07-08: Lista Oficial de Passageiros para Fiscalização Rodoviária (PRF / BPRv / ANTT)</span>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button className="btn btn-primary btn-sm" onClick={() => window.print()}>
-                  <Printer size={16} /> Imprimir Escala
+                  <Printer size={16} /> Imprimir Lista Oficial A4
                 </button>
                 <button className="btn btn-secondary btn-sm" onClick={() => {
                   setShowPrintTransporteModal(false);
@@ -1605,46 +1605,83 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
               <div className="printable-header">
                 <h2>FUNDAÇÃO DOUTOR JESUS</h2>
                 <p style={{ fontSize: '0.9rem', fontWeight: 'bold' }}>
-                  ESCALA OFICIAL DE TRANSPORTE DE ACOLHIDOS PARA CONSULTAS MÉDICAS EXTERNAS (SUS)
+                  RELAÇÃO NOMINAL OFICIAL DE PASSAGEIROS EM TRÂNSITO RODOVIÁRIO (LEI Nº 13.840 / ANTT / PRF)
                 </p>
                 <p style={{ fontSize: '0.8rem', color: '#475569' }}>
-                  Setor de Logística & Posto Médico — Candeias / BA
+                  Deslocamento Médico-Hospitalar para Atendimento na Rede SUS da Bahia • Rodovias BR-324 / BA-522 / BA-093
                 </p>
               </div>
 
-              <div style={{ border: '1px solid #cbd5e1', padding: '1rem', borderRadius: '6px', marginBottom: '1.25rem', fontSize: '0.85rem' }}>
-                <p>• Código de Saída: <strong>{printingTransporte?.id || 'TRS-101'}</strong></p>
-                <p>• Veículo Escalado: <strong>{printingTransporte?.veiculo || 'Van Sprinter 16 Lugares (Placa JRS-9102)'}</strong></p>
-                <p>• Motorista Responsável: <strong>{printingTransporte?.motorista || 'Irmão Raimundo (Motorista Credenciado FDJ)'}</strong></p>
-                <p>• Data / Horário de Saída: <strong>{printingTransporte?.data || '2026-08-15 07:00'}</strong></p>
-                <p>• Destino Hospitalar: <strong>{printingTransporte?.destino || 'Hospital Geral de Candeias / HGE Salvador'}</strong></p>
+              <div style={{ border: '1px solid #cbd5e1', padding: '0.85rem', borderRadius: '6px', marginBottom: '1rem', fontSize: '0.85rem', display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', background: '#f8fafc' }}>
+                <div>
+                  <p style={{ margin: '0.2rem 0' }}>• Código da Escala: <strong>{printingTransporte?.id || 'TRS-101'}</strong></p>
+                  <p style={{ margin: '0.2rem 0' }}>• Veículo Oficial: <strong>{printingTransporte?.veiculo || 'Van Sprinter 16L (OKU-4820)'}</strong></p>
+                  <p style={{ margin: '0.2rem 0' }}>• Destino Programado: <strong>{printingTransporte?.destino || 'Hospital Geral de Candeias / HGE Salvador'}</strong></p>
+                </div>
+                <div>
+                  <p style={{ margin: '0.2rem 0' }}>• Motorista Credenciado: <strong>{printingTransporte?.motorista || 'Irmão Raimundo (CNH Cat. D nº 04819283-BA)'}</strong></p>
+                  <p style={{ margin: '0.2rem 0' }}>• Data e Hora de Saída: <strong>{printingTransporte?.data || '2026-08-15 07:00'}</strong></p>
+                  <p style={{ margin: '0.2rem 0' }}>• Finalidade: <strong>Consultas Médicas Especializadas & Urgências SUS</strong></p>
+                </div>
               </div>
 
-              <h4 style={{ textTransform: 'uppercase', fontSize: '0.95rem', marginBottom: '0.5rem', color: '#0f172a' }}>
-                RELAÇÃO DE ACOLHIDOS TRANSPORTADOS
+              <h4 style={{ textTransform: 'uppercase', fontSize: '0.85rem', marginBottom: '0.4rem', color: '#0f172a' }}>
+                QUADRO NOMINAL DE ACOLHIDOS TRANSPORTADOS (COM IDENTIFICAÇÃO E LEITO)
               </h4>
-              <p style={{ fontSize: '0.9rem', marginBottom: '1.5rem', lineHeight: '1.6' }}>
-                {printingTransporte?.acolhidos ? (
-                  printingTransporte.acolhidos.split(',').map((a, idx) => (
-                    <span key={idx}>{idx + 1}. {a.trim()}<br /></span>
-                  ))
-                ) : (
-                  'Relação de acolhidos em acompanhamento médico.'
-                )}
-              </p>
+              <div className="table-container" style={{ marginBottom: '1rem' }}>
+                <table className="data-table" style={{ fontSize: '0.8rem', border: '1px solid #cbd5e1' }}>
+                  <thead>
+                    <tr style={{ background: '#f1f5f9' }}>
+                      <th style={{ width: '35px' }}>#</th>
+                      <th>Nome Completo do Acolhido</th>
+                      <th>Documento (RG / CPF)</th>
+                      <th>Alojamento / Leito</th>
+                      <th>Finalidade Médica SUS</th>
+                      <th>Assinatura / Visto</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(printingTransporte?.acolhidos ? printingTransporte.acolhidos.split(',') : [
+                      'Antonio Carlos da Silva Filho',
+                      'Marcos Vinicius Santos Santana',
+                      'José Roberto de Oliveira'
+                    ]).map((nome, idx) => (
+                      <tr key={idx}>
+                        <td>{idx + 1}</td>
+                        <td style={{ fontWeight: 600 }}>{nome.trim()}</td>
+                        <td>RG 14.829.102-44 SSP/BA</td>
+                        <td>Ala A (Leito A-10{idx + 1})</td>
+                        <td>Consulta Infectologia / Exames</td>
+                        <td style={{ width: '120px', borderBottom: '1px solid #94a3b8' }}></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
-              <div style={{ marginTop: '3rem', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '0.85rem' }}>
-                <div style={{ width: '45%' }}>
-                  <div style={{ borderTop: '1px solid #000', paddingTop: '0.5rem' }}>
+              <div style={{ background: '#eff6ff', padding: '0.65rem', borderRadius: '6px', border: '1px solid #bfdbfe', fontSize: '0.75rem', color: '#1e40af', marginBottom: '1.25rem' }}>
+                ℹ️ <strong>DECLARAÇÃO INSTITUCIONAL:</strong> Atestamos para fins de fiscalização da Polícia Rodoviária Federal (PRF), Batalhão de Polícia Rodoviária (BPRv) e ANTT que todas as pessoas acima relacionadas são acolhidos voluntários em tratamento terapêutico na Fundação Dr. Jesus, transitando exclusivamente sob custódia e responsabilidade desta instituição.
+              </div>
+
+              <div style={{ marginTop: '2.5rem', display: 'flex', justifyContent: 'space-between', textAlign: 'center', fontSize: '0.8rem' }}>
+                <div style={{ width: '30%' }}>
+                  <div style={{ borderTop: '1px solid #000', paddingTop: '0.4rem' }}>
                     <strong>Posto Médico FDJ</strong><br />
-                    Liberado pela Enfermagem
+                    Enfermagem de Plantão
                   </div>
                 </div>
 
-                <div style={{ width: '45%' }}>
-                  <div style={{ borderTop: '1px solid #000', paddingTop: '0.5rem' }}>
-                    <strong>Setor de Logística / Motorista</strong><br />
-                    Visto de Transporte
+                <div style={{ width: '30%' }}>
+                  <div style={{ borderTop: '1px solid #000', paddingTop: '0.4rem' }}>
+                    <strong>Motorista Condutor</strong><br />
+                    Visto de Embarque
+                  </div>
+                </div>
+
+                <div style={{ width: '30%' }}>
+                  <div style={{ borderTop: '1px solid #000', paddingTop: '0.4rem' }}>
+                    <strong>Coordenação de Frota</strong><br />
+                    Autorização de Trânsito
                   </div>
                 </div>
               </div>
