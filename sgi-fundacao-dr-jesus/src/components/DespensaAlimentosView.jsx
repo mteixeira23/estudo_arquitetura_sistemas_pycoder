@@ -150,6 +150,23 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
 
   // Sprint 2: Automação Chão de Fábrica - Cocção do Turno em Lote (RF-M06-06)
   const handleCoccaoDoTurno = (turno) => {
+    // 1. Dry-run de validação prévia de saldo (atendendo à ressalva pericial de Backend)
+    const itensInsuficientes = [];
+    gramaturas.forEach(g => {
+      const kgNecessario = (g.gramasPorPessoa * qtdAcolhidosCalc) / 1000;
+      const itemEst = estoqueAlimentos.find(i => i.item === g.itemEstoque || i.item.toLowerCase().includes(g.ingrediente.toLowerCase()));
+      const saldo = itemEst ? itemEst.qtdAtual : 0;
+      if (!itemEst || saldo < kgNecessario) {
+        itensInsuficientes.push(`${g.ingrediente}: Necessário ${kgNecessario.toFixed(1)}kg, disponível ${saldo.toFixed(1)}kg (Déficit: ${(kgNecessario - saldo).toFixed(1)}kg)`);
+      }
+    });
+
+    if (itensInsuficientes.length > 0) {
+      alert(`⚠️ BLOQUEIO SANITÁRIO / ESTOQUE INSUFICIENTE (RF-M06-06):\nNão é possível realizar a cocção do turno '${turno}' pois há déficit nos seguintes gêneros alimentícios:\n\n• ${itensInsuficientes.join('\n• ')}\n\nPor favor, requisite transferência emergencial do Almoxarifado via RMI antes de iniciar o preparo.`);
+      return;
+    }
+
+    // 2. Executa a baixa com saldo 100% garantido
     let baixasRealizadas = [];
     setEstoqueAlimentos(prev => {
       let updated = [...prev];
@@ -182,7 +199,7 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
     };
     setSaidas(prev => [novaSaidaLote, ...prev]);
 
-    alert(`🔥 Cocção do Turno (${turno}) homologada!\nBaixa em lote debitada no estoque da despensa para ${qtdAcolhidosCalc} acolhidos com sucesso.`);
+    alert(`🔥 Cocção do Turno (${turno}) homologada!\nBaixa em lote de ${baixasRealizadas.length} gêneros alimentícios debitada no estoque da despensa para ${qtdAcolhidosCalc} acolhidos com sucesso.`);
   };
 
   // Initial Food Pantry Stock (Despensa FDJ)
