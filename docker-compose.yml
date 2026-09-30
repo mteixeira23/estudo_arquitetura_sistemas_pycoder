@@ -51,7 +51,7 @@ services:
           memory: 64M
       labels:
         - "traefik.enable=true"
-        - "traefik.http.routers.scsi-front.rule=Host(`singulariconsult.com.br`) || Host(`www.singulariconsult.com.br`) || Host(`app.singulariconsult.com.br`) || Host(`app.scsi.pycoder.com.br`) || Host(`scsi.pycoder.com.br`)"
+        - "traefik.http.routers.scsi-front.rule=Host(`singulariconsult.com.br`) || Host(`www.singulariconsult.com.br`) || Host(`drjesus.singulariconsult.com.br`) || Host(`app.singulariconsult.com.br`) || Host(`app.scsi.pycoder.com.br`) || Host(`scsi.pycoder.com.br`)"
         - "traefik.http.routers.scsi-front.entrypoints=websecure"
         - "traefik.http.routers.scsi-front.tls=true"
         - "traefik.http.routers.scsi-front.middlewares=scsi-headers@file,scsi-compress@file"
@@ -121,9 +121,9 @@ services:
       - scsi_rabbitmq_password
     environment:
       DEBUG: "False"
-      ALLOWED_HOSTS: "singulariconsult.com.br,www.singulariconsult.com.br,app.singulariconsult.com.br,api.singulariconsult.com.br,api.scsi.pycoder.com.br,localhost,127.0.0.1,backend"
-      CORS_ALLOWED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://app.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br"
-      CSRF_TRUSTED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://app.singulariconsult.com.br,https://api.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br,https://api.scsi.pycoder.com.br"
+      ALLOWED_HOSTS: "singulariconsult.com.br,www.singulariconsult.com.br,drjesus.singulariconsult.com.br,caravana.singulariconsult.com.br,app.singulariconsult.com.br,api.singulariconsult.com.br,api.scsi.pycoder.com.br,localhost,127.0.0.1,backend"
+      CORS_ALLOWED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://drjesus.singulariconsult.com.br,https://caravana.singulariconsult.com.br,https://app.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br"
+      CSRF_TRUSTED_ORIGINS: "https://singulariconsult.com.br,https://www.singulariconsult.com.br,https://drjesus.singulariconsult.com.br,https://caravana.singulariconsult.com.br,https://app.singulariconsult.com.br,https://api.singulariconsult.com.br,https://app.scsi.pycoder.com.br,https://scsi.pycoder.com.br,https://api.scsi.pycoder.com.br"
       POSTGRES_HOST: "db"
       POSTGRES_PORT: "5432"
       REDIS_HOST: "redis"
