@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script de Correção do Search Path e View Users para GoTrue
+# Script de Correção do Search Path e Migrações GoTrue
 # ==============================================================================
 set -euo pipefail
 
@@ -14,24 +14,31 @@ log_ok()   { echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} $1"; }
 DB_CONTAINER=$(docker ps -q -f name=scsi_db | head -n 1)
 PG_USER=$(docker exec "${DB_CONTAINER}" cat /run/secrets/scsi_postgres_user)
 
-log_info "Configurando search_path do GoTrue e criando View de compatibilidade..."
+log_info "Registrando migrações conhecidas em auth.schema_migrations..."
 
 docker exec -i "${DB_CONTAINER}" psql -U "${PG_USER}" -d caravana_db << 'EOF'
--- 1. Definir search_path para auth no banco e nos papéis
-ALTER ROLE supabase_auth_admin SET search_path = auth, public;
-ALTER ROLE postgres SET search_path = auth, public;
-ALTER ROLE authenticator SET search_path = public, auth;
-ALTER DATABASE caravana_db SET search_path = auth, public;
+-- Garantir tabela de migrações no plural (padrão GoTrue)
+CREATE TABLE IF NOT EXISTS auth.schema_migrations (
+    version varchar(255) PRIMARY KEY
+);
 
--- 2. Criar view pública 'users' caso alguma query busque direto em public
-CREATE OR REPLACE VIEW public.users AS SELECT * FROM auth.users;
-GRANT ALL ON public.users TO supabase_auth_admin, authenticator, postgres, anon, authenticated, service_role;
+INSERT INTO auth.schema_migrations (version) VALUES ('20221208132122') ON CONFLICT DO NOTHING;
+INSERT INTO auth.schema_migrations (version) VALUES ('20240729123726') ON CONFLICT DO NOTHING;
+
+-- Caso a tabela exista sem o schema
+CREATE TABLE IF NOT EXISTS public.schema_migrations (
+    version varchar(255) PRIMARY KEY
+);
+INSERT INTO public.schema_migrations (version) VALUES ('20221208132122') ON CONFLICT DO NOTHING;
+INSERT INTO public.schema_migrations (version) VALUES ('20240729123726') ON CONFLICT DO NOTHING;
 EOF
 
-log_ok "Search path configurado e view public.users criada com sucesso!"
+log_ok "Migrações marcadas como concluídas com sucesso!"
 
-log_info "Reiniciando scsi_caravana_auth para recarregar conexões..."
+log_info "Reiniciando scsi_caravana_auth..."
 docker service update --force scsi_caravana_auth
 
-sleep 4
-log_ok "GoTrue pronto para autenticação!"
+log_info "Aguardando 6 segundos pela inicialização..."
+sleep 6
+
+docker service ls
