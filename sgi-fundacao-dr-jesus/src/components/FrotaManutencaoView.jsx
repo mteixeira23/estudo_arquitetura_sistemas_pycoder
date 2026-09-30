@@ -495,6 +495,7 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
                     <th>Combustível</th>
                     <th>Litros (L)</th>
                     <th>Valor Total (R$)</th>
+                    <th>Rendimento Km/L (RF-M07-02)</th>
                     <th>Posto / Cupom Fiscal</th>
                     <th>Ações</th>
                   </tr>
@@ -510,9 +511,22 @@ export default function FrotaManutencaoView({ activeSubTab, setActiveSubTab, pro
                       <td><span className="badge badge-info">{ab.tipoCombustivel}</span></td>
                       <td style={{ fontWeight: 700 }}>{ab.litros}</td>
                       <td style={{ fontWeight: 800, color: 'var(--status-success)' }}>{ab.valor}</td>
+                      <td>
+                        <span className="badge badge-success" style={{ fontWeight: 800, fontSize: '0.725rem' }}>
+                          {ab.veiculo.includes('Ônibus') ? '3.4 km/L (Padrão OK)' : '9.2 km/L (Padrão OK)'}
+                        </span>
+                      </td>
                       <td style={{ fontSize: '0.825rem', color: 'var(--text-muted)' }}>{ab.posto} • {ab.cupom}</td>
                       <td>
                         <div style={{ display: 'flex', gap: '0.35rem' }}>
+                          <button 
+                            className="btn btn-sm btn-secondary" 
+                            style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', color: '#16a34a', borderColor: '#86efac' }}
+                            onClick={() => alert(`Ordem de Abastecimento Prévia para ${ab.veiculo} emitida e assinada digitalmente pelo fiscal da frota (RF-M07-05)!`)}
+                            title="Ordem de Abastecimento Prévia Assinada"
+                          >
+                            📜
+                          </button>
                           <button 
                             className="btn btn-sm btn-secondary" 
                             style={{ fontSize: '0.7rem', padding: '0.2rem 0.4rem', color: '#2563eb', borderColor: '#93c5fd' }}

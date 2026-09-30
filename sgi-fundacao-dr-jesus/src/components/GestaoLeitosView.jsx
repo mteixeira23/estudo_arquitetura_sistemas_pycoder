@@ -21,7 +21,11 @@ import {
   HeartPulse,
   AlertTriangle,
   Siren,
-  User
+  User,
+  Tablet,
+  Zap,
+  KeyRound,
+  Box
 } from 'lucide-react';
 
 // Lista de Responsáveis e Coordenadores Cadastrados para Autorização de Remanejamento
@@ -107,6 +111,20 @@ export default function GestaoLeitosView({ blocos, acolhidos, presencas, activeS
     }
 
     return 'presente';
+  };
+
+  // Sprint 2: Automação Chão de Fábrica & Tablets (RF-M02-02 & RF-M04-01)
+  const [modoTabletTouch, setModoTabletTouch] = useState(false);
+  const [showDesocupacaoModal, setShowDesocupacaoModal] = useState(false);
+  const [desocupandoLeito, setDesocupandoLeito] = useState(null);
+  const [pertencesDevolvidosCofre, setPertencesDevolvidosCofre] = useState(false);
+
+  const handleMarcarTodosPresentesExcecao = () => {
+    const novasPresencas = {};
+    acolhidos.forEach(a => {
+      novasPresencas[`${dataChamada}_${a.id}`] = 'presente';
+    });
+    setChamadaFeita(prev => ({ ...prev, ...novasPresencas }));
   };
 
   // Modal State for Bed Transfer
@@ -625,79 +643,198 @@ export default function GestaoLeitosView({ blocos, acolhidos, presencas, activeS
             </div>
           </div>
 
-          {/* Interactive Chamada Table */}
-          <div className="table-container">
-            <table className="data-table">
-              <thead>
-                <tr>
-                  <th>Acolhido</th>
-                  <th>Alojamento / Leito</th>
-                  <th>Responsável pelo Bloco</th>
-                  <th>Status do Pernoite (21:30h)</th>
-                  <th>Ações de Frequência</th>
-                </tr>
-              </thead>
-              <tbody>
-                {acolhidos.map((item) => {
-                  const statusAtual = getStatusPresenca(item.id);
-                  const isAusente = statusAtual === 'ausente';
-                  return (
-                    <tr key={item.id}>
-                      <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                          <img 
-                            src={item.foto} 
-                            alt={item.nome} 
-                            style={{ 
-                              width: '42px', 
-                              height: '42px', 
-                              borderRadius: '50%', 
-                              objectFit: 'cover', 
-                              border: '2px solid var(--primary)' 
-                            }} 
-                          />
-                          <div>
-                            <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.nome}</div>
-                            <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{item.id}</div>
-                          </div>
-                        </div>
-                      </td>
-                      <td>
-                        <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{item.alojamento}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.leito}</div>
-                      </td>
-                      <td style={{ fontSize: '0.8rem' }}>Monitor Supervisor do Bloco</td>
-                      <td>
-                        {isAusente ? (
-                          <span className="badge badge-danger">🔴 Ausência Registrada em {dataChamada.split('-').reverse().join('/')}</span>
-                        ) : (
-                          <span className="badge badge-success">🟢 Presente no Leito ({dataChamada.split('-').reverse().join('/')})</span>
-                        )}
-                      </td>
-                      <td>
-                        <div style={{ display: 'flex', gap: '0.35rem' }}>
-                          <button 
-                            className={`btn btn-sm ${!isAusente ? 'btn-success' : 'btn-secondary'}`}
-                            style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', fontWeight: 800 }}
-                            onClick={() => handleTogglePresenca(item.id, true)}
-                          >
-                            <CheckCircle2 size={12} /> Presente
-                          </button>
-                          <button 
-                            className={`btn btn-sm ${isAusente ? 'btn-danger' : 'btn-secondary'}`}
-                            style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', fontWeight: 800 }}
-                            onClick={() => handleTogglePresenca(item.id, false)}
-                          >
-                            <AlertCircle size={12} /> Ausente
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+          {/* BARRA DE AUTOMAÇÃO CHÃO DE FÁBRICA & TABLETS (SPRINT 2 / RF-M02-02) */}
+          <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '8px', padding: '0.85rem 1.15rem', marginBottom: '1.25rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <span className="badge badge-success" style={{ background: '#16a34a', color: '#fff', fontSize: '0.75rem', fontWeight: 800 }}>
+                <Zap size={14} style={{ marginRight: '3px' }} /> Sprint 2 • Chão de Fábrica
+              </span>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#166534' }}>
+                Censo Rápido de Pernoite nos Dormitórios (Meta: &lt; 3 minutos no tablet)
+              </span>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <button 
+                className="btn btn-sm btn-success" 
+                onClick={handleMarcarTodosPresentesExcecao}
+                style={{ fontWeight: 800, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', background: '#16a34a', borderColor: '#16a34a', padding: '0.4rem 0.8rem' }}
+                title="Marca todos como presentes: o monitor só precisa tocar nos ausentes!"
+              >
+                <CheckCircle2 size={16} /> ⚡ Marcar Todos Presentes (Censo por Exceção)
+              </button>
+
+              <button 
+                className={`btn btn-sm ${modoTabletTouch ? 'btn-primary' : 'btn-secondary'}`}
+                onClick={() => setModoTabletTouch(!modoTabletTouch)}
+                style={{ fontWeight: 800, fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.4rem', padding: '0.4rem 0.8rem' }}
+              >
+                <Tablet size={16} /> {modoTabletTouch ? '📋 Modo Tabela' : '📱 Modo Tablet Touch (Cards Grandes)'}
+              </button>
+            </div>
           </div>
+
+          {/* VISÃO TOUCH-FIRST PARA TABLETS (RF-M02-02) */}
+          {modoTabletTouch ? (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '0.85rem', marginBottom: '1.25rem' }}>
+              {acolhidos.map((item) => {
+                const statusAtual = getStatusPresenca(item.id);
+                const isAusente = statusAtual === 'ausente';
+                return (
+                  <div 
+                    key={item.id}
+                    style={{
+                      background: isAusente ? 'rgba(239, 68, 68, 0.08)' : '#ffffff',
+                      border: isAusente ? '2px solid #ef4444' : '1.5px solid #bbf7d0',
+                      borderRadius: '10px',
+                      padding: '1rem',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '0.75rem',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.04)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <img 
+                        src={item.foto} 
+                        alt={item.nome}
+                        style={{ width: '56px', height: '56px', borderRadius: '50%', objectFit: 'cover', border: '2px solid var(--primary)' }}
+                      />
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 800, fontSize: '0.95rem', color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {item.nome}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--primary)', fontWeight: 700 }}>
+                          {item.alojamento} • {item.leito}
+                        </div>
+                        <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)' }}>
+                          {item.id}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', marginTop: 'auto' }}>
+                      <button 
+                        onClick={() => handleTogglePresenca(item.id, true)}
+                        style={{
+                          height: '46px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: !isAusente ? '#16a34a' : '#e2e8f0',
+                          color: !isAusente ? '#ffffff' : '#475569',
+                          fontWeight: 900,
+                          fontSize: '0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <CheckCircle2 size={18} /> Presente
+                      </button>
+
+                      <button 
+                        onClick={() => handleTogglePresenca(item.id, false)}
+                        style={{
+                          height: '46px',
+                          borderRadius: '8px',
+                          border: 'none',
+                          background: isAusente ? '#dc2626' : '#e2e8f0',
+                          color: isAusente ? '#ffffff' : '#475569',
+                          fontWeight: 900,
+                          fontSize: '0.85rem',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '0.35rem',
+                          cursor: 'pointer',
+                          transition: 'all 0.15s ease'
+                        }}
+                      >
+                        <AlertCircle size={18} /> Ausente
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            /* Interactive Chamada Table Clássica */
+            <div className="table-container">
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Acolhido</th>
+                    <th>Alojamento / Leito</th>
+                    <th>Responsável pelo Bloco</th>
+                    <th>Status do Pernoite (21:30h)</th>
+                    <th>Ações de Frequência</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {acolhidos.map((item) => {
+                    const statusAtual = getStatusPresenca(item.id);
+                    const isAusente = statusAtual === 'ausente';
+                    return (
+                      <tr key={item.id}>
+                        <td>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                            <img 
+                              src={item.foto} 
+                              alt={item.nome} 
+                              style={{ 
+                                width: '42px', 
+                                height: '42px', 
+                                borderRadius: '50%', 
+                                objectFit: 'cover', 
+                                border: '2px solid var(--primary)' 
+                              }} 
+                            />
+                            <div>
+                              <div style={{ fontWeight: 700, color: 'var(--text-main)' }}>{item.nome}</div>
+                              <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)' }}>{item.id}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div style={{ fontWeight: 700, color: 'var(--primary)' }}>{item.alojamento}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.leito}</div>
+                        </td>
+                        <td style={{ fontSize: '0.8rem' }}>Monitor Supervisor do Bloco</td>
+                        <td>
+                          {isAusente ? (
+                            <span className="badge badge-danger">🔴 Ausência Registrada em {dataChamada.split('-').reverse().join('/')}</span>
+                          ) : (
+                            <span className="badge badge-success">🟢 Presente no Leito ({dataChamada.split('-').reverse().join('/')})</span>
+                          )}
+                        </td>
+                        <td>
+                          <div style={{ display: 'flex', gap: '0.35rem' }}>
+                            <button 
+                              className={`btn btn-sm ${!isAusente ? 'btn-success' : 'btn-secondary'}`}
+                              style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', fontWeight: 800 }}
+                              onClick={() => handleTogglePresenca(item.id, true)}
+                            >
+                              <CheckCircle2 size={12} /> Presente
+                            </button>
+                            <button 
+                              className={`btn btn-sm ${isAusente ? 'btn-danger' : 'btn-secondary'}`}
+                              style={{ fontSize: '0.7rem', padding: '0.25rem 0.6rem', fontWeight: 800 }}
+                              onClick={() => handleTogglePresenca(item.id, false)}
+                            >
+                              <AlertCircle size={12} /> Ausente
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
         <>
@@ -840,8 +977,11 @@ export default function GestaoLeitosView({ blocos, acolhidos, presencas, activeS
                       <Accessibility size={12} />
                     </span>
                   )}
-                  <div style={{ fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 600 }}>
-                    {bedPrefix}-{bedNum}
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '0.25rem', fontSize: '0.725rem', color: 'var(--text-muted)', fontWeight: 700 }}>
+                    <span>{bedPrefix}-{bedNum}</span>
+                    <span style={{ fontSize: '0.6rem', color: isAccessible ? '#0284c7' : '#64748b' }}>
+                      ({isAccessible ? 'Beliche A' : 'Beliche B'})
+                    </span>
                   </div>
 
                   {matchedResident ? (
@@ -849,9 +989,16 @@ export default function GestaoLeitosView({ blocos, acolhidos, presencas, activeS
                       <div style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                         {matchedResident.nome.split(' ')[0]} {matchedResident.nome.split(' ')[1] || ''}
                       </div>
-                      <span className="badge badge-success" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem', marginTop: '2px' }}>
-                        {matchedResident.status}
-                      </span>
+                      <div style={{ display: 'flex', gap: '0.2rem', justifyContent: 'center', marginTop: '2px', flexWrap: 'wrap' }}>
+                        <span className="badge badge-success" style={{ fontSize: '0.55rem', padding: '0.1rem 0.3rem' }}>
+                          {matchedResident.status}
+                        </span>
+                        {matchedResident.termoMROSC && (
+                          <span className="badge badge-primary" style={{ fontSize: '0.5rem', padding: '0.05rem 0.25rem', background: '#0284c7', color: '#fff' }} title="Vaga Cativa Vinculada ao Termo MROSC SUS">
+                            SUS
+                          </span>
+                        )}
+                      </div>
                     </div>
                   ) : (
                     <div style={{
@@ -904,9 +1051,86 @@ export default function GestaoLeitosView({ blocos, acolhidos, presencas, activeS
             <div style={{ background: 'rgba(15, 23, 42, 0.6)', border: '1px solid var(--border-color)', padding: '0.85rem', borderRadius: '6px', fontSize: '0.8rem', lineHeight: 1.6 }}>
               <p>• <strong>Município de Origem:</strong> {selectedBedInfo.resident.municipioOrigem}</p>
               <p>• <strong>Substância Principal:</strong> {selectedBedInfo.resident.substanciaPrincipal} ({selectedBedInfo.resident.tempoUso})</p>
-              <p>• <strong>Convênio MROSC:</strong> {selectedBedInfo.resident.termoMROSC}</p>
+              <p>• <strong>Convênio MROSC:</strong> {selectedBedInfo.resident.termoMROSC || 'Vaga Cativa SUS/MROSC nº 005/2022'}</p>
               <p>• <strong>Laborterapia Alocada:</strong> {selectedBedInfo.resident.laborterapiaSector}</p>
               <p>• <strong>Contato Familiar:</strong> {selectedBedInfo.resident.contatoFamilia}</p>
+            </div>
+
+            <div style={{ marginTop: '1.25rem', display: 'flex', gap: '0.5rem' }}>
+              <button 
+                className="btn btn-danger btn-sm" 
+                style={{ width: '100%', fontWeight: 800, padding: '0.6rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                onClick={() => {
+                  setDesocupandoLeito(selectedBedInfo);
+                  setPertencesDevolvidosCofre(false);
+                  setShowDesocupacaoModal(true);
+                  setSelectedBedInfo(null);
+                }}
+              >
+                <KeyRound size={16} /> 🚪 Desocupação Atômica do Leito (RF-M04-01)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE DESOCUPAÇÃO ATÔMICA & DEVOLUÇÃO DE COFRE (RF-M04-01 / RF-M01-02) */}
+      {showDesocupacaoModal && desocupandoLeito && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '520px', borderLeft: '5px solid #dc2626' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <span className="badge badge-danger" style={{ fontWeight: 800 }}>
+                Protocolo P1 • Desocupação Atômica (RF-M04-01)
+              </span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowDesocupacaoModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.15rem', color: 'var(--text-main)', margin: '0 0 0.25rem 0' }}>
+                Liberar {desocupandoLeito.bedCode} de {desocupandoLeito.resident.nome}
+              </h3>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
+                O leito será desocupado e atualizado no censo em tempo real. Esta ação exige conferência obrigatória dos pertences sob custódia no Cofre Central (Módulo 1).
+              </p>
+            </div>
+
+            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', padding: '0.85rem', borderRadius: '6px', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', color: '#991b1b', fontWeight: 800, fontSize: '0.85rem' }}>
+                <Box size={18} /> Protocolo de Tripartição & Cofre Central (RF-M01-02)
+              </div>
+              <p style={{ fontSize: '0.775rem', color: '#7f1d1d', margin: '0 0 0.5rem 0' }}>
+                Conforme norma de acolhimento, itens de valor (celular, cartões, relógio, dinheiro e documentos) foram lacrados no Envelope #{desocupandoLeito.resident.id.replace('FDJ-', 'COFRE-')}.
+              </p>
+
+              <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem', cursor: 'pointer', fontSize: '0.785rem', color: '#991b1b', fontWeight: 700 }}>
+                <input 
+                  type="checkbox" 
+                  checked={pertencesDevolvidosCofre} 
+                  onChange={e => setPertencesDevolvidosCofre(e.target.checked)}
+                  style={{ marginTop: '2px', cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                Confirmo que o Envelope Lacrado do Cofre Central foi conferido e entregue mediante termo assinado em 2 vias pelo acolhido/responsável.
+              </label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowDesocupacaoModal(false)}>
+                Cancelar
+              </button>
+              <button 
+                className="btn btn-danger" 
+                disabled={!pertencesDevolvidosCofre}
+                style={{ fontWeight: 800, opacity: pertencesDevolvidosCofre ? 1 : 0.6 }}
+                onClick={() => {
+                  alert(`Sucesso! ${desocupandoLeito.bedCode} desocupado com sucesso e devolução do cofre formalizada no prontuário social!`);
+                  setShowDesocupacaoModal(false);
+                  setDesocupandoLeito(null);
+                }}
+              >
+                ✓ Confirmar Desocupação Atômica
+              </button>
             </div>
           </div>
         </div>

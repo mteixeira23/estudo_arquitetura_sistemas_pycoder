@@ -29,7 +29,10 @@ import {
   HeartPulse,
   Tag,
   Sprout,
-  DollarSign
+  DollarSign,
+  Flame,
+  Zap,
+  Gauge
 } from 'lucide-react';
 
 export default function DespensaAlimentosView({ acolhidos = [], profissionais = [], fornecedores = [], onAddTransacao, activeSubTab, setActiveSubTab }) {
@@ -144,6 +147,43 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
   // Per Capita Calculator State
   const [qtdAcolhidosCalc, setQtdAcolhidosCalc] = useState(1240);
   const [refeicaoCalc, setRefeicaoCalc] = useState('Almoço Comunitário');
+
+  // Sprint 2: Automação Chão de Fábrica - Cocção do Turno em Lote (RF-M06-06)
+  const handleCoccaoDoTurno = (turno) => {
+    let baixasRealizadas = [];
+    setEstoqueAlimentos(prev => {
+      let updated = [...prev];
+      gramaturas.forEach(g => {
+        const kgNecessario = (g.gramasPorPessoa * qtdAcolhidosCalc) / 1000;
+        updated = updated.map(item => {
+          if (item.item === g.itemEstoque || item.item.toLowerCase().includes(g.ingrediente.toLowerCase())) {
+            const novaQtd = Math.max(0, item.qtdAtual - kgNecessario);
+            baixasRealizadas.push(`${g.ingrediente}: ${kgNecessario.toFixed(1)}kg`);
+            return {
+              ...item,
+              qtdAtual: novaQtd,
+              status: novaQtd <= item.qtdMinima ? 'Estoque Crítico' : 'Normal'
+            };
+          }
+          return item;
+        });
+      });
+      return updated;
+    });
+
+    const novaSaidaLote = {
+      id: `SAI-COC-${Date.now().toString().slice(-4)}`,
+      data: `${new Date().toISOString().split('T')[0]} ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`,
+      refeicao: `${turno} (${qtdAcolhidosCalc} acolhidos)`,
+      item: `Cocção do Turno em Lote (${gramaturas.length} gêneros)`,
+      quantidade: `${gramaturas.reduce((acc, curr) => acc + (curr.gramasPorPessoa * qtdAcolhidosCalc)/1000, 0).toFixed(1)} kg total`,
+      requisitante: 'Chefe Valdeci (Cozinha Central)',
+      observacao: `Baixa automática P1 (RF-M06-06) sincronizada ao censo de ${qtdAcolhidosCalc} pessoas`
+    };
+    setSaidas(prev => [novaSaidaLote, ...prev]);
+
+    alert(`🔥 Cocção do Turno (${turno}) homologada!\nBaixa em lote debitada no estoque da despensa para ${qtdAcolhidosCalc} acolhidos com sucesso.`);
+  };
 
   // Initial Food Pantry Stock (Despensa FDJ)
   const INITIAL_DESPENSA_ESTOQUE = [
@@ -686,7 +726,7 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
           </span>
         </div>
 
-        <div className="grid-3" style={{ gap: '0.75rem' }}>
+        <div className="grid-4" style={{ gap: '0.75rem' }}>
           <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
               <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Câmara 01 (Carnes Bovina/Frango)</div>
@@ -709,6 +749,14 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
               <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#2563eb' }}>18 / 18 Aptas</div>
             </div>
             <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Validade &lt; 12m</span>
+          </div>
+
+          <div style={{ background: '#ffffff', padding: '0.65rem 0.85rem', borderRadius: '6px', border: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 700 }}>Baterias GLP P-45 (RF-M05-05)</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: '#16a34a' }}>4.2 bar (8 Cil.)</div>
+            </div>
+            <span className="badge badge-success" style={{ fontSize: '0.65rem' }}>Teto: &gt; 2.5 bar OK</span>
           </div>
         </div>
       </div>
@@ -1107,6 +1155,29 @@ export default function DespensaAlimentosView({ acolhidos = [], profissionais = 
                     onChange={e => setQtdAcolhidosCalc(parseInt(e.target.value) || 0)}
                   />
                 </div>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <select 
+                    className="form-select"
+                    style={{ height: '36px', fontSize: '0.8rem', fontWeight: 700, borderColor: '#16a34a' }}
+                    value={refeicaoCalc}
+                    onChange={e => setRefeicaoCalc(e.target.value)}
+                  >
+                    <option value="Café da Manhã">Café da Manhã</option>
+                    <option value="Almoço Comunitário">Almoço Comunitário</option>
+                    <option value="Lanche da Tarde">Lanche da Tarde</option>
+                    <option value="Jantar Comunitário">Jantar Comunitário</option>
+                  </select>
+                </div>
+
+                <button 
+                  className="btn btn-sm btn-success" 
+                  style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 800, height: '36px', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fff' }}
+                  onClick={() => handleCoccaoDoTurno(refeicaoCalc)}
+                  title="Calcula e debita de uma só vez a gramatura per capita de todos os gêneros do turno no estoque"
+                >
+                  <Flame size={16} /> 🔥 Cocção do Turno (Baixa em Lote - RF-M06-06)
+                </button>
 
                 <button 
                   className="btn btn-sm btn-primary" 

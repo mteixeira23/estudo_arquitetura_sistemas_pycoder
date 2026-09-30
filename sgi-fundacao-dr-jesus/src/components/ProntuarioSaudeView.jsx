@@ -26,7 +26,11 @@ import {
   Smile,
   ChevronRight,
   Edit,
-  Trash2
+  Trash2,
+  ScanLine,
+  Zap,
+  Award,
+  FileSignature
 } from 'lucide-react';
 import { INITIAL_PROCEDIMENTOS_ODONTO, INITIAL_MEDICAMENTOS_CATALOGO } from '../mockData';
 
@@ -190,6 +194,29 @@ export default function ProntuarioSaudeView({ acolhidos, profissionais = [], pro
     fase: currentRecords.pti.faseAtual,
     progresso: currentRecords.pti.progresso,
     parecer: ''
+  });
+
+  // Sprint 2: Automação Chão de Fábrica & Tablets (RF-M08-09 / RF-M08-02 / RF-M08-07)
+  const [showGuicheModal, setShowGuicheModal] = useState(false);
+  const [guicheCodigoBarras, setGuicheCodigoBarras] = useState('');
+  const [showCiwaModal, setShowCiwaModal] = useState(false);
+  const [ciwaScores, setCiwaScores] = useState({
+    nausea: 1,
+    tremor: 2,
+    sudorese: 1,
+    ansiedade: 2,
+    agitacao: 1,
+    alucinacoesTateis: 0,
+    alucinacoesAuditivas: 0,
+    alucinacoesVisuais: 0,
+    cefaleia: 1,
+    orientacao: 0
+  });
+  const [showParecerTripartiteModal, setShowParecerTripartiteModal] = useState(false);
+  const [parecerTripartite, setParecerTripartite] = useState({
+    medico: 'Apto clinicamente, funções hepáticas e cardíacas compensadas sem intercorrências agudas.',
+    psicologico: 'Excelente adesão às psicoterapias e grupos de apoio. Vínculo positivo estabelecido.',
+    social: 'Família contactada e acolhedora, apto para progressão com supervisão de passe terapêutico.'
   });
 
   // Update lists when selected resident changes
@@ -504,10 +531,24 @@ export default function ProntuarioSaudeView({ acolhidos, profissionais = [], pro
                 </p>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <span className="badge badge-warning" style={{ fontSize: '0.75rem', padding: '0.4rem 0.75rem' }}>
                   📅 Previsão de Alta: <strong>{ptiState.previsaoAlta}</strong>
                 </span>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setShowCiwaModal(true)}
+                  style={{ borderColor: '#f59e0b', color: '#b45309', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <Activity size={15} /> Escala CIWA-Ar (RF-M08-02)
+                </button>
+                <button 
+                  className="btn btn-secondary btn-sm" 
+                  onClick={() => setShowParecerTripartiteModal(true)}
+                  style={{ borderColor: '#0284c7', color: '#0369a1', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+                >
+                  <FileSignature size={15} /> Parecer Tripartite (RF-M08-07)
+                </button>
                 <button className="btn btn-primary btn-sm" onClick={() => setShowEvaluatorModal(true)} style={{ boxShadow: '0 2px 8px rgba(5,150,105,0.3)' }}>
                   <Sparkles size={15} /> Avaliar & Evoluir Fase do PTI
                 </button>
@@ -673,13 +714,22 @@ export default function ProntuarioSaudeView({ acolhidos, profissionais = [], pro
                 </p>
               </div>
 
-              <button className="btn btn-primary btn-sm" onClick={() => {
-                setEditingMedId(null);
-                setNewMedData({ nome: '', dose: '', horario: '08:00', prescritor: 'Dr. Roberto M. (CRM-BA 14820 - Psiquiatra)', via: 'Via Oral (VO)', tipo: 'Uso Contínuo' });
-                setShowNewMedModal(true);
-              }} style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
-                <Plus size={15} /> Prescrever Medicamento
-              </button>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
+                <button 
+                  className="btn btn-success btn-sm" 
+                  onClick={() => setShowGuicheModal(true)}
+                  style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 800, boxShadow: '0 2px 8px rgba(22,163,74,0.3)', display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#fff' }}
+                >
+                  <ScanLine size={16} /> 🏪 Modo Guichê Rápido (15s • RF-M08-09)
+                </button>
+                <button className="btn btn-primary btn-sm" onClick={() => {
+                  setEditingMedId(null);
+                  setNewMedData({ nome: '', dose: '', horario: '08:00', prescritor: 'Dr. Roberto M. (CRM-BA 14820 - Psiquiatra)', via: 'Via Oral (VO)', tipo: 'Uso Contínuo' });
+                  setShowNewMedModal(true);
+                }} style={{ boxShadow: '0 2px 8px rgba(2,132,199,0.3)' }}>
+                  <Plus size={15} /> Prescrever Medicamento
+                </button>
+              </div>
             </div>
 
             {/* KPI Metrics Cards */}
@@ -1603,6 +1653,271 @@ export default function ProntuarioSaudeView({ acolhidos, profissionais = [], pro
                 }}
               >
                 <CheckCircle2 size={16} /> Confirmar Deglutição & Gravar no Prontuário
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SPRINT 2 - MODAL 1: MODO GUICHÊ RÁPIDO DE FARMÁCIA (15s • RF-M08-09) */}
+      {showGuicheModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '680px', borderTop: '5px solid #16a34a' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <ScanLine size={22} style={{ color: '#16a34a' }} />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
+                  🏪 Guichê Rápido de Farmácia (Meta: &lt; 15s por Acolhido)
+                </h3>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowGuicheModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Resident Card with Large Photo & Allergies Badge */}
+            <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '10px', padding: '1rem', display: 'flex', gap: '1rem', alignItems: 'center', marginBottom: '1rem' }}>
+              <img 
+                src={selectedAcolhido.foto} 
+                alt={selectedAcolhido.nome} 
+                style={{ width: '84px', height: '84px', borderRadius: '10px', objectFit: 'cover', border: '3px solid #16a34a' }}
+              />
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: '1.15rem', fontWeight: 900, color: '#0f172a' }}>{selectedAcolhido.nome}</div>
+                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                  {selectedAcolhido.alojamento} • {selectedAcolhido.leito} | CPF: {selectedAcolhido.cpf}
+                </div>
+
+                {/* Banner de Alergias Vibrante */}
+                <div style={{ marginTop: '0.4rem', background: '#fee2e2', border: '1px solid #ef4444', color: '#991b1b', padding: '0.3rem 0.6rem', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800, display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                  <AlertTriangle size={14} /> ALERGIAS: {selectedAcolhido.alergias || 'Nenhuma alergia medicamentosa registrada'}
+                </div>
+              </div>
+            </div>
+
+            {/* Simulação de Leitor de Código de Barras */}
+            <div style={{ background: '#f0fdf4', border: '1px solid #86efac', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <ScanLine size={20} style={{ color: '#16a34a' }} />
+              <input 
+                type="text" 
+                className="form-input" 
+                placeholder="Bipe o código de barras (EAN-13) ou digite o fármaco..."
+                style={{ height: '36px', fontSize: '0.85rem', flex: 1 }}
+                value={guicheCodigoBarras}
+                onChange={e => setGuicheCodigoBarras(e.target.value)}
+              />
+              <button 
+                className="btn btn-sm btn-primary"
+                onClick={() => {
+                  alert(`Código ${guicheCodigoBarras || '7891234567890'} validado com sucesso no catálogo ANVISA!`);
+                  setGuicheCodigoBarras('');
+                }}
+              >
+                Bipar (Simulação)
+              </button>
+            </div>
+
+            {/* Meds Checklist for Instant Dispense */}
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ fontSize: '0.85rem', fontWeight: 800, color: 'var(--text-main)', marginBottom: '0.5rem' }}>
+                Medicamentos Prescritos para este Turno:
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                {medsList.map(m => (
+                  <div key={m.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '0.65rem 0.85rem' }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#0f172a' }}>{m.nome}</div>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{m.dose} • {m.horario} • {m.prescritor}</div>
+                    </div>
+                    <span className={`badge ${m.administrado ? 'badge-success' : 'badge-warning'}`} style={{ fontSize: '0.75rem', fontWeight: 800 }}>
+                      {m.administrado ? '✓ Dispensado' : '⏳ Pendente'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowGuicheModal(false)}>Fechar</button>
+              <button 
+                className="btn btn-success" 
+                style={{ background: '#16a34a', borderColor: '#16a34a', fontWeight: 900, display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                onClick={() => {
+                  setMedsList(medsList.map(m => ({ ...m, administrado: true })));
+                  alert(`Dispensação concluída em 8.4 segundos!\nFoto verificada, ausência de alergia confirmada e deglutição oral registrada no prontuário.`);
+                  setShowGuicheModal(false);
+                }}
+              >
+                <CheckCircle2 size={18} /> ✓ Dispensar Todos & Confirmar Deglutição (1 Toque)
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SPRINT 2 - MODAL 2: ESCALA CIWA-Ar PARA ABSTINÊNCIA (RF-M08-02) */}
+      {showCiwaModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '640px', borderTop: '5px solid #f59e0b' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Activity size={22} style={{ color: '#f59e0b' }} />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
+                  Escala de Abstinência Alcoólica CIWA-Ar (RF-M08-02)
+                </h3>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowCiwaModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Score Calculator */}
+            {(() => {
+              const total = Object.values(ciwaScores).reduce((a, b) => a + b, 0);
+              let gravidade = 'Leve';
+              let cor = '#16a34a';
+              let conduta = 'Manter monitoramento de rotina, hidratação oral e acolhimento no dormitório.';
+              if (total >= 10 && total <= 19) {
+                gravidade = 'Moderada';
+                cor = '#f59e0b';
+                conduta = 'Suporte farmacológico (Benzodiazepínicos sob prescrição médica) e supervisão de enfermagem a cada 2 horas.';
+              } else if (total >= 20) {
+                gravidade = 'Grave / Risco de Delirium Tremens';
+                cor = '#dc2626';
+                conduta = 'Acionamento imediato da Ambulância FDJ / SAMU 192 para remoção hospitalar urgente (UPA 24h Candeias).';
+              }
+
+              return (
+                <div>
+                  <div style={{ background: '#f8fafc', border: `2px solid ${cor}`, borderRadius: '10px', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <div>
+                      <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', color: 'var(--text-muted)' }}>
+                        Escore Total CIWA-Ar
+                      </div>
+                      <div style={{ fontSize: '1.8rem', fontWeight: 900, color: cor }}>
+                        {total} Pontos — {gravidade}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: '#334155', marginTop: '0.2rem' }}>
+                        <strong>Conduta Recomendada:</strong> {conduta}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Form Items */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', maxHeight: '340px', overflowY: 'auto', paddingRight: '0.5rem', marginBottom: '1rem' }}>
+                    {[
+                      { key: 'nausea', label: 'Náusea e Vômitos (0-7)' },
+                      { key: 'tremor', label: 'Tremores de Extremidades (0-7)' },
+                      { key: 'sudorese', label: 'Sudorese Paroxística (0-7)' },
+                      { key: 'ansiedade', label: 'Ansiedade / Apreensão (0-7)' },
+                      { key: 'agitacao', label: 'Agitação Psicomotora (0-7)' },
+                      { key: 'alucinacoesTateis', label: 'Alterações Táteis / Prurido (0-7)' },
+                      { key: 'alucinacoesAuditivas', label: 'Alterações Auditivas (0-7)' },
+                      { key: 'alucinacoesVisuais', label: 'Alterações Visuais (0-7)' },
+                      { key: 'cefaleia', label: 'Cefaleia / Pressão Craniana (0-7)' },
+                      { key: 'orientacao', label: 'Desorientação / Turvação (0-4)' }
+                    ].map(item => (
+                      <div key={item.key} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '6px', padding: '0.5rem 0.75rem' }}>
+                        <label style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-main)', display: 'block', marginBottom: '0.25rem' }}>
+                          {item.label}
+                        </label>
+                        <input 
+                          type="number" 
+                          min="0" 
+                          max="7" 
+                          className="form-input" 
+                          style={{ height: '30px', fontSize: '0.85rem', fontWeight: 800, width: '100%' }}
+                          value={ciwaScores[item.key]} 
+                          onChange={e => setCiwaScores({ ...ciwaScores, [item.key]: parseInt(e.target.value) || 0 })}
+                        />
+                      </div>
+                    ))}
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                    <button className="btn btn-secondary" onClick={() => setShowCiwaModal(false)}>Cancelar</button>
+                    <button 
+                      className="btn btn-primary"
+                      onClick={() => {
+                        alert(`Avaliação CIWA-Ar (${total} pts - ${gravidade}) salva com sucesso no prontuário de ${selectedAcolhido.nome}!`);
+                        setShowCiwaModal(false);
+                      }}
+                    >
+                      ✓ Salvar Avaliação no Prontuário
+                    </button>
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
+
+      {/* SPRINT 2 - MODAL 3: PARECER TRIPARTITE DE TRANSIÇÃO (RF-M08-07) */}
+      {showParecerTripartiteModal && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '640px', borderTop: '5px solid #0284c7' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileSignature size={22} style={{ color: '#0284c7' }} />
+                <h3 style={{ fontSize: '1.2rem', fontWeight: 900, color: 'var(--text-main)', margin: 0 }}>
+                  Parecer Tripartite de Transição de Fase (RF-M08-07)
+                </h3>
+              </div>
+              <button className="btn btn-secondary btn-sm" onClick={() => setShowParecerTripartiteModal(false)}>
+                <X size={16} />
+              </button>
+            </div>
+
+            <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+              A transição entre as fases do PTI (Desintoxicação → Conscientização → Reinserção Social) exige o laudo conjunto das 3 frentes técnicas obrigatórias pela RDC 29 Anvisa.
+            </p>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1.25rem' }}>
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#0369a1' }}>1. Parecer Médico / Enfermagem (Clínica Geral & Psiquiatria):</label>
+                <textarea 
+                  className="form-input" 
+                  rows="2" 
+                  style={{ width: '100%', fontSize: '0.8rem' }}
+                  value={parecerTripartite.medico}
+                  onChange={e => setParecerTripartite({ ...parecerTripartite, medico: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#7c3aed' }}>2. Parecer Psicológico (CRP 03):</label>
+                <textarea 
+                  className="form-input" 
+                  rows="2" 
+                  style={{ width: '100%', fontSize: '0.8rem' }}
+                  value={parecerTripartite.psicologico}
+                  onChange={e => setParecerTripartite({ ...parecerTripartite, psicologico: e.target.value })}
+                />
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.8rem', fontWeight: 800, color: '#16a34a' }}>3. Parecer Social / Familiar (CRESS-BA):</label>
+                <textarea 
+                  className="form-input" 
+                  rows="2" 
+                  style={{ width: '100%', fontSize: '0.8rem' }}
+                  value={parecerTripartite.social}
+                  onChange={e => setParecerTripartite({ ...parecerTripartite, social: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" onClick={() => setShowParecerTripartiteModal(false)}>Cancelar</button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => {
+                  alert(`Parecer Tripartite homologado com sucesso! Os 3 laudos foram integrados ao prontuário e autorizam a progressão do PTI de ${selectedAcolhido.nome}.`);
+                  setShowParecerTripartiteModal(false);
+                }}
+              >
+                ✓ Homologar Parecer Tripartite
               </button>
             </div>
           </div>

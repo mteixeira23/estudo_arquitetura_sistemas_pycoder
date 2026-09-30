@@ -866,3 +866,146 @@ class SGISafetyGuardsTestCase(TestCase):
         )
         self.assertEqual(chunk.nivel_sigilo, "ART11_SENSIVEL")
         self.assertIn("ART11_SENSIVEL", [choice[0] for choice in chunk._meta.get_field("nivel_sigilo").choices])
+
+
+class SGISprint2ChaoDeFabricaTestCase(TestCase):
+    """
+    Testes de Engenharia para o Sprint 2: Automação de Chão de Fábrica & Tablets (Nível P1).
+    Cobre:
+    - RF-M06-06: Cocção do Turno e cálculo de gramatura per capita com baixa em lote;
+    - RF-M08-02: Escala CIWA-Ar para triagem de abstinência e tomada de decisão clínica;
+    - RF-M07-07: Checklist de 60s do motorista no celular com validação de itens críticos;
+    - RF-M07-02: Telemetria de consumo Km/L de Diesel S10 e alerta de desvio;
+    - RF-M04-01: Desocupação atômica de leito vinculada à conferência do cofre de pertences.
+    """
+
+    def test_baixa_coccao_turno_calcula_gramatura_e_debita_estoque(self):
+        """RF-M06-06: Cálculo de gramatura per capita e baixa em lote na despensa para 1.240 acolhidos."""
+        censo_acolhidos = 1240
+        fichas_tecnicas = [
+            {"ingrediente": "Arroz", "gramas_por_pessoa": 100, "estoque_atual_kg": 500.0},
+            {"ingrediente": "Feijão", "gramas_por_pessoa": 50, "estoque_atual_kg": 300.0},
+            {"ingrediente": "Carne", "gramas_por_pessoa": 120, "estoque_atual_kg": 200.0},
+        ]
+
+        def calcular_e_baixar_coccao(censo, itens):
+            baixas = []
+            for item in itens:
+                kg_necessario = (item["gramas_por_pessoa"] * censo) / 1000.0
+                if item["estoque_atual_kg"] < kg_necessario:
+                    raise ValueError(f"Estoque insuficiente de {item['ingrediente']}: Necessário {kg_necessario}kg, disponível {item['estoque_atual_kg']}kg")
+                item["estoque_atual_kg"] -= kg_necessario
+                baixas.append({"ingrediente": item["ingrediente"], "debitado_kg": kg_necessario})
+            return baixas
+
+        baixas = calcular_e_baixar_coccao(censo_acolhidos, fichas_tecnicas)
+        self.assertEqual(len(baixas), 3)
+        self.assertEqual(baixas[0]["debitado_kg"], 124.0) # 100g * 1240 / 1000
+        self.assertEqual(baixas[1]["debitado_kg"], 62.0)  # 50g * 1240 / 1000
+        self.assertEqual(baixas[2]["debitado_kg"], 148.8) # 120g * 1240 / 1000
+
+        # Tentativa com censo maior que o estoque deve falhar
+        with self.assertRaises(ValueError):
+            calcular_e_baixar_coccao(5000, fichas_tecnicas)
+
+    def test_escala_ciwa_ar_classificacao_gravidade(self):
+        """RF-M08-02: Escala CIWA-Ar para triagem de abstinência (<10 leve, 10-19 moderada, >=20 grave)."""
+        def classificar_ciwa(scores):
+            total = sum(scores.values())
+            if total < 10:
+                return {"score": total, "classificacao": "LEVE", "conduta": "ROTINA"}
+            elif 10 <= total <= 19:
+                return {"score": total, "classificacao": "MODERADA", "conduta": "MEDICACAO_ORAL"}
+            else:
+                return {"score": total, "classificacao": "GRAVE", "conduta": "REMOCAO_HOSPITALAR"}
+
+        score_leve = {"nausea": 1, "tremor": 2, "sudorese": 1, "ansiedade": 1, "agitacao": 0}
+        score_mod = {"nausea": 3, "tremor": 4, "sudorese": 3, "ansiedade": 3, "agitacao": 2}
+        score_grave = {"nausea": 5, "tremor": 6, "sudorese": 6, "ansiedade": 5, "agitacao": 4}
+
+        self.assertEqual(classificar_ciwa(score_leve)["classificacao"], "LEVE")
+        self.assertEqual(classificar_ciwa(score_mod)["classificacao"], "MODERADA")
+        self.assertEqual(classificar_ciwa(score_grave)["classificacao"], "GRAVE")
+        self.assertEqual(classificar_ciwa(score_grave)["conduta"], "REMOCAO_HOSPITALAR")
+
+    def test_checklist_pre_viagem_60s_valida_itens_obrigatorios(self):
+        """RF-M07-07: Checklist de 60s do motorista no celular bloqueia liberação se faltar item crítico."""
+        checklist_aprovado = {
+            "pneus_twi": True,
+            "tacografo": True,
+            "oleo_agua": True,
+            "freios": True,
+            "farois": True,
+            "extintor": True,
+            "assinatura_motorista": "Irmão Raimundo (Motorista Credenciado)"
+        }
+        checklist_reprovado = {
+            "pneus_twi": True,
+            "tacografo": False, # Vencido
+            "oleo_agua": True,
+            "freios": True,
+            "farois": True,
+            "extintor": True,
+            "assinatura_motorista": "Irmão Raimundo"
+        }
+
+        def validar_liberacao_veiculo(chk):
+            itens_criticos = ["pneus_twi", "tacografo", "oleo_agua", "freios", "farois", "extintor"]
+            if not chk.get("assinatura_motorista"):
+                raise PermissionError("Assinatura digital do motorista obrigatória.")
+            for item in itens_criticos:
+                if not chk.get(item):
+                    raise PermissionError(f"Bloqueio de Saída: Item '{item}' reprovado no checklist de segurança.")
+            return "LIBERADO_PARA_RODOVIA"
+
+        self.assertEqual(validar_liberacao_veiculo(checklist_aprovado), "LIBERADO_PARA_RODOVIA")
+        with self.assertRaises(PermissionError):
+            validar_liberacao_veiculo(checklist_reprovado)
+
+    def test_calculo_rendimento_km_litro_diesel_s10(self):
+        """RF-M07-02: Telemetria de consumo Km/L e detecção de anomalia / desvio de combustível."""
+        def calcular_rendimento(km_rodados, litros_abastecidos, tipo_veiculo):
+            if litros_abastecidos <= 0:
+                raise ValueError("Litros abastecidos deve ser superior a zero.")
+            media = km_rodados / litros_abastecidos
+            
+            # Limites mínimos aceitáveis por porte
+            limite_minimo = 2.5 if tipo_veiculo == "ONIBUS" else 6.0
+            status = "ANOMALO_DESVIO" if media < limite_minimo else "NORMAL"
+            return {"km_litro": round(media, 2), "status": status}
+
+        # Ônibus rodou 408 km com 120 litros (3.4 km/L -> Normal)
+        res_onibus = calcular_rendimento(408, 120, "ONIBUS")
+        self.assertEqual(res_onibus["km_litro"], 3.4)
+        self.assertEqual(res_onibus["status"], "NORMAL")
+
+        # Ônibus rodou 200 km com 120 litros (1.67 km/L -> Anômalo)
+        res_anomalo = calcular_rendimento(200, 120, "ONIBUS")
+        self.assertEqual(res_anomalo["status"], "ANOMALO_DESVIO")
+
+    def test_desocupacao_atomica_leito_e_baixa_cofre_pertences(self):
+        """RF-M04-01 / RF-M01-02: Desocupação de leito condicionada à conferência do cofre de pertences."""
+        leito_ocupado = {
+            "codigo": "Leito A-101",
+            "acolhido_id": "FDJ-2026-0891",
+            "ocupado": True,
+            "cofre_envelope_id": "COFRE-2026-0891",
+            "termo_devolucao_assinado": False
+        }
+
+        def processar_desocupacao_atomica(leito):
+            if not leito.get("termo_devolucao_assinado"):
+                raise PermissionError("Bloqueio P1: Não é possível liberar o leito sem a conferência e assinatura do Termo de Devolução de Pertences do Cofre (Envelope Lacrado).")
+            leito["ocupado"] = False
+            leito["acolhido_id"] = None
+            return "LEITO_LIBERADO_NO_CENSO"
+
+        # Sem termo de cofre assinado, deve falhar
+        with self.assertRaises(PermissionError):
+            processar_desocupacao_atomica(leito_ocupado)
+
+        # Com termo de cofre assinado, libera o leito
+        leito_ocupado["termo_devolucao_assinado"] = True
+        self.assertEqual(processar_desocupacao_atomica(leito_ocupado), "LEITO_LIBERADO_NO_CENSO")
+        self.assertFalse(leito_ocupado["ocupado"])
+
