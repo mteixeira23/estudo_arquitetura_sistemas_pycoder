@@ -150,7 +150,7 @@ services:
     image: supabase/gotrue:v2.158.1
     environment:
       GOTRUE_DB_DRIVER: "postgres"
-      GOTRUE_DB_DATABASE_URL: "postgres://authenticator:caravana_authenticator_pass@db:5432/caravana_db?sslmode=disable"
+      GOTRUE_DB_DATABASE_URL: "postgres://supabase_auth_admin:caravana_authenticator_pass@db:5432/caravana_db?sslmode=disable"
       GOTRUE_JWT_SECRET: "caravana-secret-jwt-key-32-chars-long-min-len-pycoder"
       GOTRUE_JWT_EXP: "3600"
       GOTRUE_SITE_URL: "https://caravana.singulariconsult.com.br"
