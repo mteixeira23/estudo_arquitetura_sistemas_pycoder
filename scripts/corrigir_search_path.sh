@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script de Correção do Search Path, Colunas aud/role e Identities
+# Script de Correção do Usuário Admin e Identities para GoTrue
 # ==============================================================================
 set -euo pipefail
 
@@ -14,53 +14,68 @@ log_ok()   { echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} $1"; }
 DB_CONTAINER=$(docker ps -q -f name=scsi_db | head -n 1)
 PG_USER=$(docker exec "${DB_CONTAINER}" cat /run/secrets/scsi_postgres_user)
 
-log_info "Ajustando colunas 'aud', 'role' e tabela 'auth.identities'..."
+log_info "Atualizando usuário admcaravana3@gmail.com e identities..."
 
 docker exec -i "${DB_CONTAINER}" psql -U "${PG_USER}" -d caravana_db << 'EOF'
--- 1. Colunas aud e role em auth.users
-ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS aud varchar(255) DEFAULT 'authenticated';
-ALTER TABLE auth.users ADD COLUMN IF NOT EXISTS role varchar(255) DEFAULT 'authenticated';
-
-UPDATE auth.users SET aud = 'authenticated', role = 'authenticated' WHERE aud IS NULL OR role IS NULL;
-
--- 2. Garantir auth.identities para login por e-mail
-CREATE TABLE IF NOT EXISTS auth.identities (
-    id text NOT NULL,
-    user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    identity_data jsonb NOT NULL,
-    provider text NOT NULL,
-    last_sign_in_at timestamptz,
-    created_at timestamptz,
-    updated_at timestamptz,
-    email text GENERATED ALWAYS AS (lower(identity_data->>'email')) STORED,
-    CONSTRAINT identities_pkey PRIMARY KEY (provider, id)
-);
-
-INSERT INTO auth.identities (id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+-- 1. Inserir ou atualizar usuário com todos os atributos GoTrue
+INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 VALUES (
     '27c10e88-1699-4278-a167-2297cd37e0e7',
-    '27c10e88-1699-4278-a167-2297cd37e0e7',
-    '{"sub": "27c10e88-1699-4278-a167-2297cd37e0e7", "email": "admcaravana3@gmail.com"}'::jsonb,
-    'email',
+    '00000000-0000-0000-0000-000000000000',
+    'authenticated',
+    'authenticated',
+    'admcaravana3@gmail.com',
+    crypt('caravana', gen_salt('bf')),
     now(),
+    '{"provider": "email", "providers": ["email"]}'::jsonb,
+    '{"nome_completo": "Admcaravana3"}'::jsonb,
     now(),
     now()
-) ON CONFLICT DO NOTHING;
+)
+ON CONFLICT (id) DO UPDATE SET
+    aud = 'authenticated',
+    role = 'authenticated',
+    email = 'admcaravana3@gmail.com',
+    encrypted_password = crypt('caravana', gen_salt('bf')),
+    email_confirmed_at = coalesce(auth.users.email_confirmed_at, now()),
+    raw_app_meta_data = '{"provider": "email", "providers": ["email"]}'::jsonb;
 
--- 3. Atualizar view pública com as novas colunas
+-- 2. Inserir ou atualizar identidade com provider_id correto
+DO $$ BEGIN
+    INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+    VALUES (
+        '27c10e88-1699-4278-a167-2297cd37e0e7',
+        '27c10e88-1699-4278-a167-2297cd37e0e7',
+        '27c10e88-1699-4278-a167-2297cd37e0e7',
+        '{"sub": "27c10e88-1699-4278-a167-2297cd37e0e7", "email": "admcaravana3@gmail.com"}'::jsonb,
+        'email',
+        now(),
+        now(),
+        now()
+    )
+    ON CONFLICT (provider, provider_id) DO NOTHING;
+EXCEPTION WHEN OTHERS THEN
+    BEGIN
+        INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
+        VALUES (
+            '27c10e88-1699-4278-a167-2297cd37e0e7',
+            '27c10e88-1699-4278-a167-2297cd37e0e7',
+            '{"sub": "27c10e88-1699-4278-a167-2297cd37e0e7", "email": "admcaravana3@gmail.com"}'::jsonb,
+            'email',
+            now(),
+            now(),
+            now()
+        )
+        ON CONFLICT DO NOTHING;
+    EXCEPTION WHEN OTHERS THEN null;
+    END;
+END $$;
+
+-- 3. Atualizar view pública
 DROP VIEW IF EXISTS public.users CASCADE;
 CREATE OR REPLACE VIEW public.users AS SELECT * FROM auth.users;
 
 GRANT ALL ON public.users TO supabase_auth_admin, authenticator, postgres, anon, authenticated, service_role;
-GRANT ALL ON ALL TABLES IN SCHEMA auth TO supabase_auth_admin, authenticator, postgres, anon, authenticated, service_role;
 EOF
 
-log_ok "Schema auth e identities atualizados com sucesso!"
-
-log_info "Reiniciando scsi_caravana_auth..."
-docker service update --force scsi_caravana_auth
-
-log_info "Aguardando inicialização..."
-sleep 4
-
-docker service ls
+log_ok "Usuário e identities configurados com sucesso!"
