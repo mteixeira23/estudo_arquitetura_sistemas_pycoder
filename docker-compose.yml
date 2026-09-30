@@ -156,6 +156,7 @@ services:
       GOTRUE_SITE_URL: "https://caravana.singulariconsult.com.br"
       GOTRUE_URI_ALLOW_LIST: "https://caravana.singulariconsult.com.br*"
       GOTRUE_DISABLE_SIGNUP: "false"
+      GOTRUE_MAILER_AUTOCONFIRM: "true"
       API_EXTERNAL_URL: "https://caravana.singulariconsult.com.br/auth/v1"
       GOTRUE_API_HOST: "0.0.0.0"
       PORT: "9999"

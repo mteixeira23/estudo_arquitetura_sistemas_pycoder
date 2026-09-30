@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ==============================================================================
-# Script de Correção do Usuário Admin e Identities para GoTrue
+# Script de Confirmação de E-mail e Sincronização de Senha GoTrue
 # ==============================================================================
 set -euo pipefail
 
@@ -14,68 +14,33 @@ log_ok()   { echo -e "${COLOR_GREEN}[OK]${COLOR_RESET} $1"; }
 DB_CONTAINER=$(docker ps -q -f name=scsi_db | head -n 1)
 PG_USER=$(docker exec "${DB_CONTAINER}" cat /run/secrets/scsi_postgres_user)
 
-log_info "Atualizando usuário admcaravana3@gmail.com e identities..."
+log_info "Confirmando e-mails e aplicando hash oficial de senha aos usuários..."
 
 docker exec -i "${DB_CONTAINER}" psql -U "${PG_USER}" -d caravana_db << 'EOF'
--- 1. Inserir ou atualizar usuário com todos os atributos GoTrue
-INSERT INTO auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
-VALUES (
-    '27c10e88-1699-4278-a167-2297cd37e0e7',
-    '00000000-0000-0000-0000-000000000000',
-    'authenticated',
-    'authenticated',
-    'admcaravana3@gmail.com',
-    crypt('caravana', gen_salt('bf')),
-    now(),
-    '{"provider": "email", "providers": ["email"]}'::jsonb,
-    '{"nome_completo": "Admcaravana3"}'::jsonb,
-    now(),
-    now()
-)
-ON CONFLICT (id) DO UPDATE SET
+-- 1. Confirmar todos os e-mails para liberar login imediato
+UPDATE auth.users 
+SET email_confirmed_at = now(), 
+    confirmed_at = now(),
     aud = 'authenticated',
-    role = 'authenticated',
-    email = 'admcaravana3@gmail.com',
-    encrypted_password = crypt('caravana', gen_salt('bf')),
-    email_confirmed_at = coalesce(auth.users.email_confirmed_at, now()),
-    raw_app_meta_data = '{"provider": "email", "providers": ["email"]}'::jsonb;
+    role = 'authenticated';
 
--- 2. Inserir ou atualizar identidade com provider_id correto
-DO $$ BEGIN
-    INSERT INTO auth.identities (id, provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-    VALUES (
-        '27c10e88-1699-4278-a167-2297cd37e0e7',
-        '27c10e88-1699-4278-a167-2297cd37e0e7',
-        '27c10e88-1699-4278-a167-2297cd37e0e7',
-        '{"sub": "27c10e88-1699-4278-a167-2297cd37e0e7", "email": "admcaravana3@gmail.com"}'::jsonb,
-        'email',
-        now(),
-        now(),
-        now()
-    )
-    ON CONFLICT (provider, provider_id) DO NOTHING;
-EXCEPTION WHEN OTHERS THEN
-    BEGIN
-        INSERT INTO auth.identities (provider_id, user_id, identity_data, provider, last_sign_in_at, created_at, updated_at)
-        VALUES (
-            '27c10e88-1699-4278-a167-2297cd37e0e7',
-            '27c10e88-1699-4278-a167-2297cd37e0e7',
-            '{"sub": "27c10e88-1699-4278-a167-2297cd37e0e7", "email": "admcaravana3@gmail.com"}'::jsonb,
-            'email',
-            now(),
-            now(),
-            now()
-        )
-        ON CONFLICT DO NOTHING;
-    EXCEPTION WHEN OTHERS THEN null;
-    END;
-END $$;
+-- 2. Se admin@caravana.com existe, replicar o hash criptográfico para admcaravana3@gmail.com
+UPDATE auth.users
+SET encrypted_password = (SELECT encrypted_password FROM auth.users WHERE email = 'admin@caravana.com')
+WHERE email = 'admcaravana3@gmail.com' AND EXISTS (SELECT 1 FROM auth.users WHERE email = 'admin@caravana.com');
 
--- 3. Atualizar view pública
-DROP VIEW IF EXISTS public.users CASCADE;
-CREATE OR REPLACE VIEW public.users AS SELECT * FROM auth.users;
-
-GRANT ALL ON public.users TO supabase_auth_admin, authenticator, postgres, anon, authenticated, service_role;
+-- 3. Vincular role de coordenador para os administradores
+INSERT INTO public.user_roles (user_id, role)
+SELECT id, 'coordenador_campo'
+FROM auth.users
+WHERE email IN ('admin@caravana.com', 'admcaravana3@gmail.com')
+ON CONFLICT DO NOTHING;
 EOF
 
-log_ok "Usuário e identities configurados com sucesso!"
+log_ok "E-mails confirmados e senhas sincronizadas!"
+
+log_info "Atualizando stack Swarm com autoconfirmação ativada..."
+docker stack deploy -c docker-compose.yml --resolve-image never scsi
+
+sleep 4
+log_ok "Tudo pronto e liberado para login!"
